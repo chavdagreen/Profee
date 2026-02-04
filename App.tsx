@@ -23,6 +23,7 @@ import ClientsView from './components/ClientsView';
 import ProceedingsView from './components/ProceedingsView';
 import BillingView from './components/BillingView';
 import AuthView from './components/AuthView';
+import ProfileSetupView from './components/ProfileSetupView';
 import { generateAppLogo } from './services/geminiService';
 import * as db from './services/database';
 import { supabase } from './services/supabase';
@@ -287,7 +288,7 @@ const App: React.FC = () => {
             <Gavel className="w-10 h-10 animate-pulse" />
           </div>
           <h1 className="text-3xl font-black text-indigo-600 tracking-tighter">Profee</h1>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Loading...</p>
+          <p className="text-[10px] font-black text-slate-400 tracking-wide mt-2">Loading...</p>
         </div>
       </div>
     );
@@ -296,6 +297,20 @@ const App: React.FC = () => {
   // ======= AUTH SCREEN =======
   if (!user) {
     return <AuthView onAuthSuccess={loadAllData} />;
+  }
+
+  // ======= PROFILE SETUP SCREEN (first-time users) =======
+  const isProfileIncomplete = !dataLoading && billingSettings.practiceName === 'My Practice' && !billingSettings.address;
+
+  if (isProfileIncomplete) {
+    return (
+      <ProfileSetupView
+        settings={billingSettings}
+        onComplete={(updatedSettings) => {
+          handleSetBillingSettings(updatedSettings);
+        }}
+      />
+    );
   }
 
   // ======= DATA LOADING SCREEN =======
@@ -307,7 +322,7 @@ const App: React.FC = () => {
             <RefreshCw className="w-10 h-10 animate-spin" />
           </div>
           <h1 className="text-3xl font-black text-indigo-600 tracking-tighter">Profee</h1>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Loading your practice data...</p>
+          <p className="text-[10px] font-black text-slate-400 tracking-wide mt-2">Loading your practice data...</p>
         </div>
       </div>
     );
@@ -353,7 +368,7 @@ const App: React.FC = () => {
           </div>
           <div>
             <h1 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">Profee</h1>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">AI Tax Professional</p>
+            <p className="text-[9px] font-black text-slate-400 tracking-wide leading-none">AI Tax Professional</p>
           </div>
         </div>
 
@@ -371,12 +386,12 @@ const App: React.FC = () => {
                 {(user?.email?.[0] || 'U').toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-xs text-slate-800 dark:text-slate-200 truncate uppercase tracking-tight">{billingSettings.practiceName}</p>
+                <p className="font-black text-xs text-slate-800 dark:text-slate-200 truncate tracking-tight">{billingSettings.practiceName}</p>
                 <p className="text-[9px] text-slate-400 truncate">{user?.email}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <button onClick={toggleTheme} className="text-[10px] text-indigo-500 font-black uppercase tracking-widest hover:underline">{isDarkMode ? 'Light' : 'Dark'}</button>
+                  <button onClick={toggleTheme} className="text-[10px] text-indigo-500 font-black tracking-wide hover:underline">{isDarkMode ? 'Light' : 'Dark'}</button>
                   <span className="text-slate-300">&bull;</span>
-                  <button onClick={handleLogout} className="text-[10px] text-slate-400 font-black uppercase tracking-widest hover:text-rose-500 transition-colors">Logout</button>
+                  <button onClick={handleLogout} className="text-[10px] text-slate-400 font-black tracking-wide hover:text-rose-500 transition-colors">Logout</button>
                 </div>
               </div>
             </div>

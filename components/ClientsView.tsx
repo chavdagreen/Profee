@@ -121,7 +121,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
       <div className="w-80 flex flex-col clay-card bg-white dark:bg-slate-800 border-none shadow-xl overflow-hidden">
         <div className="p-4 border-b border-slate-50 dark:border-slate-700 space-y-3 bg-slate-50/50">
           <div className="flex items-center justify-between">
-            <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tighter text-sm">Client Directory</h3>
+            <h3 className="font-black text-slate-800 dark:text-white tracking-tight text-sm">Client Directory</h3>
             <span className="text-[10px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">{filteredClients.length}</span>
           </div>
           <div className="relative">
@@ -135,7 +135,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
             />
           </div>
           <select 
-            className="clay-input w-full p-2 text-[10px] font-black uppercase tracking-widest text-slate-500"
+            className="clay-input w-full p-2 text-[10px] font-black tracking-wide text-slate-500"
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
           >
@@ -155,15 +155,15 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                 {client.name.charAt(0)}
               </div>
               <div className="truncate flex-1">
-                <p className={`font-black uppercase tracking-tight text-xs truncate ${selectedClientId === client.id ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{client.name}</p>
-                <p className={`text-[9px] font-bold truncate opacity-60 uppercase tracking-widest ${selectedClientId === client.id ? 'text-indigo-100' : 'text-slate-400'}`}>{client.pan}</p>
+                <p className={`font-bold text-xs truncate ${selectedClientId === client.id ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{client.name}</p>
+                <p className={`text-[9px] font-bold truncate opacity-60 tracking-wide ${selectedClientId === client.id ? 'text-indigo-100' : 'text-slate-400'}`}>{client.pan}</p>
               </div>
               <ChevronRight size={14} className={`shrink-0 transition-transform ${selectedClientId === client.id ? 'translate-x-1' : 'opacity-0 group-hover:opacity-100'}`} />
             </button>
           ))}
           <button 
             onClick={() => setShowAddModal(true)}
-            className="w-full p-4 text-center text-indigo-600 font-black text-[10px] uppercase tracking-widest bg-indigo-50/50 hover:bg-indigo-100 transition-colors sticky bottom-0 border-t"
+            className="w-full p-4 text-center text-indigo-600 font-black text-[10px] tracking-wide bg-indigo-50/50 hover:bg-indigo-100 transition-colors sticky bottom-0 border-t"
           >
             + New Client
           </button>
@@ -177,11 +177,11 @@ const ClientsView: React.FC<ClientsViewProps> = ({
             <div className="clay-card p-8 border-none bg-white dark:bg-slate-800 shadow-xl flex items-center gap-8 sticky top-0 z-10">
                <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-black shadow-lg shadow-indigo-200">{selectedClient.name.charAt(0)}</div>
                <div className="flex-1">
-                  <h2 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none">{selectedClient.name}</h2>
+                  <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight leading-none">{selectedClient.name}</h2>
                   <div className="flex items-center gap-4 mt-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1"><Building size={12}/> {selectedClient.group}</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1"><Tag size={12}/> {selectedClient.pan}</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg">{selectedClient.entityType}</span>
+                    <span className="text-[10px] font-black tracking-wide text-slate-400 flex items-center gap-1"><Building size={12}/> {selectedClient.group}</span>
+                    <span className="text-[10px] font-black tracking-wide text-slate-400 flex items-center gap-1"><Tag size={12}/> {selectedClient.pan}</span>
+                    <span className="text-[10px] font-black tracking-wide bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg">{selectedClient.entityType}</span>
                   </div>
                </div>
                <div className="flex bg-slate-100 dark:bg-slate-700 p-1.5 rounded-2xl">
@@ -189,7 +189,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                     <button 
                       key={tab} 
                       onClick={() => setProfileTab(tab as any)} 
-                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === tab ? 'bg-white dark:bg-slate-600 text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-wide transition-all ${profileTab === tab ? 'bg-white dark:bg-slate-600 text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       {tab}
                     </button>
@@ -200,12 +200,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({
             {profileTab === 'details' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-2">
                 <div className="clay-card p-8 bg-white dark:bg-slate-800 border-none space-y-6">
-                  <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest border-b pb-2">Identification & Portal</h4>
+                  <h4 className="text-[10px] font-black text-indigo-500 tracking-wide border-b pb-2">Identification & Portal</h4>
                   <div className="space-y-4">
                     <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl group">
                        <ShieldCheck className="text-emerald-500" size={20} />
                        <div className="flex-1">
-                          <p className="text-[9px] font-black text-slate-400 uppercase">IT Portal Password (Encrypted)</p>
+                          <p className="text-[9px] font-bold text-slate-400">IT Portal Password (Encrypted)</p>
                           <p className="font-bold font-mono tracking-tighter text-slate-800 dark:text-slate-200">
                             {isPasswordVisible ? (selectedClient.portalPassword || 'N/A') : '••••••••••••'}
                           </p>
@@ -214,11 +214,11 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                          <p className="text-[9px] font-black text-slate-400 uppercase">GSTIN</p>
+                          <p className="text-[9px] font-bold text-slate-400">GSTIN</p>
                           <p className="font-bold text-xs">{selectedClient.gstin || 'Unregistered'}</p>
                        </div>
                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                          <p className="text-[9px] font-black text-slate-400 uppercase">Email ID</p>
+                          <p className="text-[9px] font-bold text-slate-400">Email ID</p>
                           <p className="font-bold text-xs truncate">{selectedClient.email || 'None'}</p>
                        </div>
                     </div>
@@ -226,15 +226,15 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                 </div>
 
                 <div className="clay-card p-8 bg-white dark:bg-slate-800 border-none space-y-6">
-                  <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest border-b pb-2">Communication</h4>
+                  <h4 className="text-[10px] font-black text-indigo-500 tracking-wide border-b pb-2">Communication</h4>
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
                        <Phone className="text-slate-300" size={18} />
-                       <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</p><p className="font-bold">{selectedClient.contact}</p></div>
+                       <div><p className="text-[10px] font-bold text-slate-400">Mobile</p><p className="font-bold">{selectedClient.contact}</p></div>
                     </div>
                     <div className="flex items-center gap-4">
                        <MapPin className="text-slate-300" size={18} />
-                       <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Address</p><p className="font-bold text-sm leading-tight text-slate-600">{selectedClient.address || 'Not Provided'}</p></div>
+                       <div><p className="text-[10px] font-bold text-slate-400">Address</p><p className="font-bold text-sm leading-tight text-slate-600">{selectedClient.address || 'Not Provided'}</p></div>
                     </div>
                   </div>
                 </div>
@@ -245,23 +245,23 @@ const ClientsView: React.FC<ClientsViewProps> = ({
               <div className="space-y-6 animate-in slide-in-from-bottom-2">
                  <div className="grid grid-cols-3 gap-6">
                     <div className="clay-card p-6 bg-emerald-500 text-white border-none flex items-center justify-between">
-                       <div><p className="text-[9px] font-black uppercase tracking-widest opacity-80">Paid Amount</p><h3 className="text-3xl font-black">₹{clientReceipts.reduce((s, r) => s + r.amount, 0).toLocaleString()}</h3></div>
+                       <div><p className="text-[9px] font-black tracking-wide opacity-80">Paid Amount</p><h3 className="text-3xl font-black">₹{clientReceipts.reduce((s, r) => s + r.amount, 0).toLocaleString()}</h3></div>
                        <TrendingUp size={32} className="opacity-30" />
                     </div>
                     <div className="clay-card p-6 bg-amber-500 text-white border-none flex items-center justify-between">
-                       <div><p className="text-[9px] font-black uppercase tracking-widest opacity-80">Receivable</p><h3 className="text-3xl font-black">₹{ledgerData.length > 0 ? ledgerData[ledgerData.length-1].balance.toLocaleString() : 0}</h3></div>
+                       <div><p className="text-[9px] font-black tracking-wide opacity-80">Receivable</p><h3 className="text-3xl font-black">₹{ledgerData.length > 0 ? ledgerData[ledgerData.length-1].balance.toLocaleString() : 0}</h3></div>
                        <AlertCircle size={32} className="opacity-30" />
                     </div>
                     <div className="clay-card p-4 bg-white dark:bg-slate-800 border-none flex flex-col gap-2">
                        <button 
                         onClick={() => onQuickBill({ clientId: selectedClient.id, clientName: selectedClient.name })}
-                        className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] tracking-wide hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                        >
                          <ReceiptIndianRupee size={16}/> Create Invoice
                        </button>
                        <button 
                         onClick={() => setActiveView('billing')}
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[10px] tracking-wide hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
                        >
                          <Wallet size={16}/> Record Receipt
                        </button>
@@ -270,7 +270,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
 
                  <div className="clay-card p-8 border-none bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
                     <div className="flex justify-between items-center mb-6">
-                       <h4 className="font-black text-slate-800 dark:text-white uppercase tracking-widest">Ledger Statement</h4>
+                       <h4 className="font-black text-slate-800 dark:text-white tracking-wide">Ledger Statement</h4>
                        <div className="flex gap-2">
                          <button className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-indigo-600"><Printer size={16}/></button>
                          <button className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-indigo-600"><FileDown size={16}/></button>
@@ -278,7 +278,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                     </div>
                     <div className="overflow-x-auto">
                        <table className="w-full text-left text-sm font-bold">
-                          <thead className="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-black uppercase text-slate-400 tracking-widest border-b">
+                          <thead className="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-bold uppercase text-slate-400 tracking-wide border-b">
                              <tr>
                                 <th className="px-6 py-4">Date</th>
                                 <th className="px-6 py-4">Particulars</th>
@@ -307,7 +307,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
             {profileTab === 'proceedings' && (
               <div className="space-y-6 animate-in slide-in-from-bottom-2">
                  <div className="flex justify-between items-center">
-                    <h4 className="font-black text-slate-800 dark:text-white uppercase tracking-widest">Case Directory</h4>
+                    <h4 className="font-black text-slate-800 dark:text-white tracking-wide">Case Directory</h4>
                     <button onClick={() => setShowAddHearingModal(true)} className="clay-button px-6 py-2 flex items-center gap-2 font-black text-[10px]">
                       <Plus size={14}/> Register New Matter
                     </button>
@@ -319,18 +319,18 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                             <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase">{h.forum}</span>
                             <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${h.status === 'Upcoming' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>{h.status}</span>
                          </div>
-                         <h5 className="font-black text-lg text-slate-800 dark:text-white uppercase tracking-tight leading-tight">{h.caseType}</h5>
-                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-4">AY {h.assessmentYear}</p>
+                         <h5 className="font-black text-lg text-slate-800 dark:text-white tracking-tight leading-tight">{h.caseType}</h5>
+                         <p className="text-[10px] font-bold text-slate-400 tracking-wide mt-1 mb-4">AY {h.assessmentYear}</p>
                          <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
                             <div className="flex items-center gap-2 text-slate-500"><Calendar size={14}/><span className="text-[10px] font-black">{h.hearingDate}</span></div>
-                            <button className="text-indigo-600 font-black text-[10px] uppercase flex items-center gap-1 group-hover:translate-x-1 transition-transform">View Details <ChevronRight size={12}/></button>
+                            <button className="text-indigo-600 font-bold text-[10px] flex items-center gap-1 group-hover:translate-x-1 transition-transform">View Details <ChevronRight size={12}/></button>
                          </div>
                       </div>
                     ))}
                     {clientHearings.length === 0 && (
                       <div className="col-span-full p-20 flex flex-col items-center justify-center opacity-20">
                          <Gavel size={64} className="mb-4" />
-                         <p className="font-black uppercase tracking-widest text-sm">No Active Proceedings</p>
+                         <p className="font-black tracking-wide text-sm">No Active Proceedings</p>
                       </div>
                     )}
                  </div>
@@ -340,7 +340,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-300">
              <Users size={64} className="mb-4 opacity-10" />
-             <p className="font-black uppercase tracking-widest">Select a client to view profile</p>
+             <p className="font-black tracking-wide">Select a client to view profile</p>
           </div>
         )}
       </div>
@@ -350,34 +350,34 @@ const ClientsView: React.FC<ClientsViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="clay-card p-10 bg-white dark:bg-slate-800 w-full max-w-2xl border-none shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3"><UserPlus className="text-indigo-600"/> Create Professional Profile</h3>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3"><UserPlus className="text-indigo-600"/> Create Professional Profile</h3>
               <button onClick={() => setShowAddModal(false)} className="p-2 text-slate-400 hover:text-rose-500"><X /></button>
             </div>
             <form onSubmit={handleAddClient} className="grid grid-cols-2 gap-6">
                <div className="col-span-2 space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Full Legal Name</label>
+                  <label className="text-[10px] font-bold text-slate-400">Full Legal Name</label>
                   <input required className="clay-input w-full p-3 font-bold" onChange={e => setNewClient({...newClient, name: e.target.value})} />
                </div>
                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PAN Number</label>
+                  <label className="text-[10px] font-bold text-slate-400">PAN Number</label>
                   <input required placeholder="ABCDE1234F" className="clay-input w-full p-3 font-bold uppercase" maxLength={10} onChange={e => setNewClient({...newClient, pan: e.target.value.toUpperCase()})} />
                </div>
                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Entity Type</label>
+                  <label className="text-[10px] font-bold text-slate-400">Entity Type</label>
                   <select className="clay-input w-full p-3 font-bold" onChange={e => setNewClient({...newClient, entityType: e.target.value as any})}>
                     <option value="Individual">Individual</option><option value="Company">Company</option><option value="Firm">Partnership Firm</option><option value="HUF">HUF</option>
                   </select>
                </div>
                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile Contact</label>
+                  <label className="text-[10px] font-bold text-slate-400">Mobile Contact</label>
                   <input required className="clay-input w-full p-3 font-bold" onChange={e => setNewClient({...newClient, contact: e.target.value})} />
                </div>
                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Portal Password</label>
+                  <label className="text-[10px] font-bold text-slate-400">Portal Password</label>
                   <input type="password" placeholder="••••••••" className="clay-input w-full p-3 font-bold" onChange={e => setNewClient({...newClient, portalPassword: e.target.value})} />
                </div>
                <div className="col-span-2 space-y-1">
-                  <div className="flex justify-between items-center"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Group Assignment</label><button type="button" onClick={() => setIsAddingGroup(!isAddingGroup)} className="text-[8px] font-black text-indigo-600 uppercase underline">+ Create Group</button></div>
+                  <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-400">Group Assignment</label><button type="button" onClick={() => setIsAddingGroup(!isAddingGroup)} className="text-[8px] font-bold text-indigo-600 underline">+ Create Group</button></div>
                   {isAddingGroup ? <input required placeholder="New group name..." className="clay-input w-full p-3 font-bold" onChange={e => setNewGroupName(e.target.value)} /> : <select className="clay-input w-full p-3 font-bold" onChange={e => setNewClient({...newClient, group: e.target.value})}>{groups.map(g => <option key={g} value={g}>{g}</option>)}</select>}
                </div>
                <button type="submit" className="col-span-2 clay-button py-4 mt-4 font-black text-lg flex items-center justify-center gap-2 shadow-indigo-100"><Sparkles size={20}/> Encrypt & Save Profile</button>
@@ -391,33 +391,33 @@ const ClientsView: React.FC<ClientsViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in zoom-in-95">
            <div className="clay-card p-10 bg-white dark:bg-slate-800 w-full max-w-xl border-none shadow-2xl">
               <div className="flex justify-between items-center mb-8">
-                 <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">New Matter: {selectedClient?.name}</h3>
+                 <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">New Matter: {selectedClient?.name}</h3>
                  <button onClick={() => setShowAddHearingModal(false)} className="p-2 text-slate-400 hover:text-rose-500"><X /></button>
               </div>
               <form onSubmit={handleAddHearing} className="grid grid-cols-2 gap-6">
                  <div className="col-span-2 space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Case/Notice Description</label>
+                    <label className="text-[10px] font-bold text-slate-400">Case/Notice Description</label>
                     <input required placeholder="E.g. 148 Reassessment Notice" className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, caseType: e.target.value})} />
                  </div>
                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Assessment Year</label>
+                    <label className="text-[10px] font-bold text-slate-400">Assessment Year</label>
                     <input required placeholder="2021-22" className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, assessmentYear: e.target.value})} />
                  </div>
                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Forum</label>
+                    <label className="text-[10px] font-bold text-slate-400">Forum</label>
                     <select className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, forum: e.target.value})}>
                        <option value="AO">AO</option><option value="CIT(A)">CIT (Appeals)</option><option value="ITAT">ITAT</option>
                     </select>
                  </div>
                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Date of Compliance</label>
+                    <label className="text-[10px] font-bold text-slate-400">Date of Compliance</label>
                     <input type="date" className="clay-input w-full p-3 font-bold" value={newHearing.hearingDate} onChange={e => setNewHearing({...newHearing, hearingDate: e.target.value})} />
                  </div>
                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee Quote (₹)</label>
+                    <label className="text-[10px] font-bold text-slate-400">Fee Quote (₹)</label>
                     <input type="number" className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, quotedFees: Number(e.target.value)})} />
                  </div>
-                 <button type="submit" className="col-span-2 clay-button py-4 mt-4 font-black uppercase flex items-center justify-center gap-2"><Plus size={18}/> Add Matter to Ledger</button>
+                 <button type="submit" className="col-span-2 clay-button py-4 mt-4 font-black flex items-center justify-center gap-2"><Plus size={18}/> Add Matter to Ledger</button>
               </form>
            </div>
         </div>
