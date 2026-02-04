@@ -1,0 +1,7 @@
+{
+  "name": "Profee",
+  "description": "A minimalist, 3D-cartoon styled ERP for Indian Tax Professionals to manage proceedings, clients, hearings, and billing with AI branding.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
