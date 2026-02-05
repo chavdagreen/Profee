@@ -26,7 +26,7 @@ interface BillingViewProps {
 const BillingView: React.FC<BillingViewProps> = ({
   invoices, setInvoices, clients, receipts, setReceipts, groups, settings, setSettings, prefill, onPrefillProcessed
 }) => {
-  const [subView, setSubView] = useState<'list' | 'create' | 'settings' | 'invoice-preview' | 'groups' | 'create-receipt' | 'receipt-preview'>('list');
+  const [subView, setSubView] = useState<'list' | 'create' | 'settings' | 'invoice-preview' | 'groups' | 'create-receipt' | 'receipt-preview' | 'client-ledger' | 'group-ledger'>('list');
   const [activeTab, setActiveTab] = useState<'invoices' | 'receipts'>('invoices');
   const [currentInvoice, setCurrentInvoice] = useState<Invoice | null>(null);
   const [currentReceipt, setCurrentReceipt] = useState<Receipt | null>(null);
@@ -34,6 +34,12 @@ const BillingView: React.FC<BillingViewProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [localSettings, setLocalSettings] = useState<BillingSettings>(settings);
+
+  // Ledger states
+  const [selectedLedgerClient, setSelectedLedgerClient] = useState<string>('');
+  const [selectedGroupClients, setSelectedGroupClients] = useState<string[]>([]);
+  const [ledgerDateFrom, setLedgerDateFrom] = useState<string>('');
+  const [ledgerDateTo, setLedgerDateTo] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Sync local settings when parent settings change (e.g. on initial load)
   useEffect(() => {
@@ -788,6 +794,238 @@ const BillingView: React.FC<BillingViewProps> = ({
     );
   }
 
+  // ============ CLIENT LEDGER VIEW ============
+  if (subView === 'client-ledger') {
+    const clientInvoices = invoices.filter(i => i.clientId === selectedLedgerClient);
+    const clientReceipts = receipts.filter(r => r.clientId === selectedLedgerClient);
+    const clientData = clients.find(c => c.id === selectedLedgerClient);
+
+    // Combine and sort by date
+    const ledgerEntries = [
+      ...clientInvoices.map(inv => ({ type: 'invoice' as const, date: inv.date || '', amount: inv.total || 0, ref: inv.invoiceNumber, description: `Invoice raised` })),
+      ...clientReceipts.map(rcp => ({ type: 'receipt' as const, date: rcp.date || '', amount: rcp.amount || 0, ref: rcp.receiptNumber, description: `Payment received (${rcp.paymentMethod})` }))
+    ].filter(e => {
+      if (ledgerDateFrom && e.date < ledgerDateFrom) return false;
+      if (ledgerDateTo && e.date > ledgerDateTo) return false;
+      return true;
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let runningBalance = 0;
+    const ledgerWithBalance = ledgerEntries.map(entry => {
+      if (entry.type === 'invoice') runningBalance += entry.amount;
+      else runningBalance -= entry.amount;
+      return { ...entry, balance: runningBalance };
+    });
+
+    const totalInvoiced = ledgerWithBalance.filter(e => e.type === 'invoice').reduce((sum, e) => sum + e.amount, 0);
+    const totalReceived = ledgerWithBalance.filter(e => e.type === 'receipt').reduce((sum, e) => sum + e.amount, 0);
+
+    return (
+      <div className="space-y-8 animate-in fade-in">
+        <div className="flex items-center justify-between no-print">
+          <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-black hover:underline"><ChevronLeft size={20} /> Back to Records</button>
+          <button
+            disabled={isDownloading}
+            onClick={() => downloadPDF('ledger-capture', `Ledger_${clientData?.name || 'Client'}.pdf`)}
+            className="clay-button px-8 py-2 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
+          >
+            {isDownloading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Generating...</> : <><FileDown size={20} /> Download PDF</>}
+          </button>
+        </div>
+
+        <div id="ledger-capture" className="bg-white p-10 rounded-3xl shadow-2xl">
+          <div className="flex justify-between items-start mb-8 pb-6 border-b">
+            <div>
+              <h1 className="text-3xl font-black text-slate-800 tracking-tighter">Client Ledger</h1>
+              <p className="text-sm text-slate-400 mt-1">{settings.practiceName}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xl font-black text-slate-800">{clientData?.name}</p>
+              <p className="text-sm text-slate-400">{clientData?.pan && `PAN: ${clientData.pan}`}</p>
+            </div>
+          </div>
+
+          {ledgerDateFrom || ledgerDateTo ? (
+            <p className="text-sm text-slate-400 mb-4">Period: {ledgerDateFrom || 'Start'} to {ledgerDateTo || 'Now'}</p>
+          ) : null}
+
+          <table className="w-full text-sm mb-8">
+            <thead>
+              <tr className="bg-slate-100 text-[10px] font-black text-slate-500">
+                <th className="px-4 py-3 text-left">Date</th>
+                <th className="px-4 py-3 text-left">Ref#</th>
+                <th className="px-4 py-3 text-left">Description</th>
+                <th className="px-4 py-3 text-right">Debit (₹)</th>
+                <th className="px-4 py-3 text-right">Credit (₹)</th>
+                <th className="px-4 py-3 text-right">Balance (₹)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {ledgerWithBalance.map((entry, i) => (
+                <tr key={i} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-slate-500">{entry.date}</td>
+                  <td className="px-4 py-3 font-bold text-slate-700">{entry.ref}</td>
+                  <td className="px-4 py-3 text-slate-600">{entry.description}</td>
+                  <td className="px-4 py-3 text-right font-bold text-rose-600">{entry.type === 'invoice' ? `₹${entry.amount.toLocaleString()}` : '-'}</td>
+                  <td className="px-4 py-3 text-right font-bold text-emerald-600">{entry.type === 'receipt' ? `₹${entry.amount.toLocaleString()}` : '-'}</td>
+                  <td className={`px-4 py-3 text-right font-black ${entry.balance >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₹{Math.abs(entry.balance).toLocaleString()}{entry.balance >= 0 ? ' Dr' : ' Cr'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="grid grid-cols-3 gap-4 p-6 bg-slate-50 rounded-2xl">
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-slate-400 mb-1">Total Invoiced</p>
+              <p className="text-xl font-black text-rose-600">₹{totalInvoiced.toLocaleString()}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-slate-400 mb-1">Total Received</p>
+              <p className="text-xl font-black text-emerald-600">₹{totalReceived.toLocaleString()}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-slate-400 mb-1">Outstanding</p>
+              <p className={`text-xl font-black ${totalInvoiced - totalReceived >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₹{Math.abs(totalInvoiced - totalReceived).toLocaleString()}</p>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-slate-400 text-center mt-6">Generated on {new Date().toLocaleDateString('en-IN')} | {settings.practiceName}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ GROUP LEDGER VIEW ============
+  if (subView === 'group-ledger') {
+    const selectedClients = clients.filter(c => selectedGroupClients.includes(c.id));
+
+    // Build ledger for all selected clients
+    const allEntries = selectedClients.flatMap(client => {
+      const clientInvoices = invoices.filter(i => i.clientId === client.id);
+      const clientReceipts = receipts.filter(r => r.clientId === client.id);
+      return [
+        ...clientInvoices.map(inv => ({ clientId: client.id, clientName: client.name, type: 'invoice' as const, date: inv.date || '', amount: inv.total || 0, ref: inv.invoiceNumber })),
+        ...clientReceipts.map(rcp => ({ clientId: client.id, clientName: client.name, type: 'receipt' as const, date: rcp.date || '', amount: rcp.amount || 0, ref: rcp.receiptNumber }))
+      ];
+    }).filter(e => {
+      if (ledgerDateFrom && e.date < ledgerDateFrom) return false;
+      if (ledgerDateTo && e.date > ledgerDateTo) return false;
+      return true;
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Group by client for summary
+    const clientSummaries = selectedClients.map(client => {
+      const entries = allEntries.filter(e => e.clientId === client.id);
+      const totalInvoiced = entries.filter(e => e.type === 'invoice').reduce((sum, e) => sum + e.amount, 0);
+      const totalReceived = entries.filter(e => e.type === 'receipt').reduce((sum, e) => sum + e.amount, 0);
+      return { client, totalInvoiced, totalReceived, outstanding: totalInvoiced - totalReceived };
+    });
+
+    const grandTotalInvoiced = clientSummaries.reduce((sum, s) => sum + s.totalInvoiced, 0);
+    const grandTotalReceived = clientSummaries.reduce((sum, s) => sum + s.totalReceived, 0);
+
+    return (
+      <div className="space-y-8 animate-in fade-in">
+        <div className="flex items-center justify-between no-print">
+          <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-black hover:underline"><ChevronLeft size={20} /> Back to Records</button>
+          <button
+            disabled={isDownloading || selectedGroupClients.length === 0}
+            onClick={() => downloadPDF('group-ledger-capture', `Group_Ledger_${new Date().toISOString().split('T')[0]}.pdf`)}
+            className="clay-button px-8 py-2 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
+          >
+            {isDownloading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Generating...</> : <><FileDown size={20} /> Download PDF</>}
+          </button>
+        </div>
+
+        {/* Client Selection */}
+        <div className="clay-card p-6 bg-white dark:bg-slate-800 border-none shadow-xl no-print">
+          <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4">Select Clients for Ledger</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto">
+            {clients.map(client => (
+              <label key={client.id} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${selectedGroupClients.includes(client.id) ? 'bg-indigo-100 border-2 border-indigo-400' : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'}`}>
+                <input
+                  type="checkbox"
+                  checked={selectedGroupClients.includes(client.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedGroupClients([...selectedGroupClients, client.id]);
+                    else setSelectedGroupClients(selectedGroupClients.filter(id => id !== client.id));
+                  }}
+                  className="w-4 h-4 text-indigo-600"
+                />
+                <span className="text-sm font-bold text-slate-700 truncate">{client.name}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-4 mt-4">
+            <button onClick={() => setSelectedGroupClients(clients.map(c => c.id))} className="text-xs font-bold text-indigo-600 hover:underline">Select All</button>
+            <button onClick={() => setSelectedGroupClients([])} className="text-xs font-bold text-slate-400 hover:underline">Clear All</button>
+          </div>
+        </div>
+
+        {/* Date Filter */}
+        <div className="clay-card p-6 bg-white dark:bg-slate-800 border-none shadow-xl no-print">
+          <h4 className="text-sm font-black text-slate-600 dark:text-slate-300 mb-3">Filter by Date Range</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400">From</label>
+              <input type="date" className="clay-input w-full p-3 font-bold" value={ledgerDateFrom} onChange={e => setLedgerDateFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400">To</label>
+              <input type="date" className="clay-input w-full p-3 font-bold" value={ledgerDateTo} onChange={e => setLedgerDateTo(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {selectedGroupClients.length > 0 && (
+          <div id="group-ledger-capture" className="bg-white p-10 rounded-3xl shadow-2xl">
+            <div className="flex justify-between items-start mb-8 pb-6 border-b">
+              <div>
+                <h1 className="text-3xl font-black text-slate-800 tracking-tighter">Group Ledger</h1>
+                <p className="text-sm text-slate-400 mt-1">{settings.practiceName}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-slate-500">{selectedGroupClients.length} Client(s) Selected</p>
+                {(ledgerDateFrom || ledgerDateTo) && <p className="text-xs text-slate-400">{ledgerDateFrom || 'Start'} to {ledgerDateTo || 'Now'}</p>}
+              </div>
+            </div>
+
+            <table className="w-full text-sm mb-8">
+              <thead>
+                <tr className="bg-slate-100 text-[10px] font-black text-slate-500">
+                  <th className="px-4 py-3 text-left">Client</th>
+                  <th className="px-4 py-3 text-right">Total Invoiced (₹)</th>
+                  <th className="px-4 py-3 text-right">Total Received (₹)</th>
+                  <th className="px-4 py-3 text-right">Outstanding (₹)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {clientSummaries.map((summary, i) => (
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="px-4 py-4 font-black text-slate-800">{summary.client.name}</td>
+                    <td className="px-4 py-4 text-right font-bold text-rose-600">₹{summary.totalInvoiced.toLocaleString()}</td>
+                    <td className="px-4 py-4 text-right font-bold text-emerald-600">₹{summary.totalReceived.toLocaleString()}</td>
+                    <td className={`px-4 py-4 text-right font-black ${summary.outstanding >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₹{Math.abs(summary.outstanding).toLocaleString()}{summary.outstanding >= 0 ? ' Dr' : ' Cr'}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-800 text-white">
+                  <td className="px-4 py-4 font-black">Grand Total</td>
+                  <td className="px-4 py-4 text-right font-black">₹{grandTotalInvoiced.toLocaleString()}</td>
+                  <td className="px-4 py-4 text-right font-black">₹{grandTotalReceived.toLocaleString()}</td>
+                  <td className="px-4 py-4 text-right font-black">₹{Math.abs(grandTotalInvoiced - grandTotalReceived).toLocaleString()}{grandTotalInvoiced - grandTotalReceived >= 0 ? ' Dr' : ' Cr'}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <p className="text-[10px] text-slate-400 text-center mt-6">Generated on {new Date().toLocaleDateString('en-IN')} | {settings.practiceName}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ============ MAIN LIST VIEW ============
   return (
     <div className="space-y-8 animate-in fade-in no-print">
@@ -796,10 +1034,11 @@ const BillingView: React.FC<BillingViewProps> = ({
           <h2 className="text-3xl font-black text-slate-800 dark:text-white">Revenue Control</h2>
           <p className="text-slate-400 font-bold tracking-wide text-xs">Practice Billing & Professional Accounting</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-3">
            <button onClick={() => setSubView('settings')} className="p-3 bg-white dark:bg-slate-800 rounded-2xl text-slate-400 hover:text-indigo-600 shadow-sm transition-all"><Settings size={24} /></button>
-           <button onClick={() => { setReceiptForm({ ...receiptForm, receiptNumber: `RCP/${Date.now().toString().slice(-4)}`, date: new Date().toISOString().split('T')[0] }); setSubView('create-receipt'); }} className="clay-button bg-emerald-600 px-6 py-3 font-black flex items-center gap-2 shadow-lg"><Wallet size={24} /> Record Receipt</button>
-           <button onClick={() => { setIsEditing(false); setInvoiceForm(initialInvoiceState); setSubView('create'); }} className="clay-button px-8 py-3 font-black flex items-center gap-2 shadow-lg"><Plus size={24} /> Raise Invoice</button>
+           <button onClick={() => { setSelectedGroupClients([]); setSubView('group-ledger'); }} className="clay-button bg-slate-700 px-5 py-3 font-bold flex items-center gap-2 shadow-lg text-sm"><Table size={20} /> Group Ledger</button>
+           <button onClick={() => { setReceiptForm({ ...receiptForm, receiptNumber: `RCP/${Date.now().toString().slice(-4)}`, date: new Date().toISOString().split('T')[0] }); setSubView('create-receipt'); }} className="clay-button bg-emerald-600 px-5 py-3 font-bold flex items-center gap-2 shadow-lg text-sm"><Wallet size={20} /> Record Receipt</button>
+           <button onClick={() => { setIsEditing(false); setInvoiceForm(initialInvoiceState); setSubView('create'); }} className="clay-button px-6 py-3 font-bold flex items-center gap-2 shadow-lg text-sm"><Plus size={20} /> Raise Invoice</button>
         </div>
       </div>
 
@@ -810,6 +1049,21 @@ const BillingView: React.FC<BillingViewProps> = ({
             <button onClick={() => setActiveTab('receipts')} className={`flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black transition-all ${activeTab === 'receipts' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'}`}>Receipts</button>
           </div>
           <div className="relative flex-1 w-full md:w-auto"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18}/><input placeholder="Search records..." className="clay-input pl-12 pr-4 py-3 w-full text-sm font-bold" /></div>
+          {/* Client Ledger Dropdown */}
+          <div className="relative">
+            <select
+              className="clay-input px-4 py-3 pr-10 font-bold text-sm appearance-none cursor-pointer"
+              value={selectedLedgerClient}
+              onChange={(e) => {
+                setSelectedLedgerClient(e.target.value);
+                if (e.target.value) setSubView('client-ledger');
+              }}
+            >
+              <option value="">Client Ledger...</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <FileText className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+          </div>
         </div>
 
         <table className="w-full text-left font-bold text-sm">
