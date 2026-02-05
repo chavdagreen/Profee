@@ -195,9 +195,9 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onShowPrivacy, onSho
         <div className="text-center mt-8 space-y-2">
           <p className="text-[10px] font-bold text-slate-400">
             By signing in, you agree to our{' '}
-            <button onClick={onShowTerms} className="text-indigo-500 hover:underline">Terms of Service</button>
+            <a href="/terms" className="text-indigo-500 hover:underline">Terms of Service</a>
             {' '}and{' '}
-            <button onClick={onShowPrivacy} className="text-indigo-500 hover:underline">Privacy Policy</button>
+            <a href="/privacy" className="text-indigo-500 hover:underline">Privacy Policy</a>
           </p>
           <p className="text-[10px] font-bold text-slate-400">
             Secured by Supabase &bull; profee.in
