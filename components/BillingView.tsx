@@ -7,6 +7,8 @@ import {
   Banknote, Smartphone, Hash, X, Trash2, Smartphone as UpiIcon, Table,
   Edit2, FileDown, CheckCircle, Clock, AlertTriangle, QrCode, ChevronRight, Save
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface BillingViewProps {
   invoices: Invoice[];
@@ -77,39 +79,9 @@ const BillingView: React.FC<BillingViewProps> = ({
   }, [prefill]);
 
   // ============ PDF DOWNLOAD FUNCTION ============
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = false;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Failed to load ${src}`));
-      document.body.appendChild(script);
-    });
-  };
-
   const downloadPDF = async (elementId: string, filename: string) => {
     setIsDownloading(true);
     try {
-      // Load html2canvas if not available
-      if (!(window as any).html2canvas) {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-        await new Promise(r => setTimeout(r, 500));
-      }
-
-      // Load jsPDF if not available
-      if (!(window as any).jspdf) {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js');
-        await new Promise(r => setTimeout(r, 500));
-      }
-
-      const html2canvas = (window as any).html2canvas;
-      const jsPDF = (window as any).jspdf?.jsPDF;
-
-      if (!html2canvas || !jsPDF) {
-        throw new Error('PDF libraries failed to load. Please check your internet connection.');
-      }
-
       const element = document.getElementById(elementId);
       if (!element) {
         throw new Error('Document element not found');
