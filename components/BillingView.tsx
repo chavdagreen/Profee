@@ -76,141 +76,89 @@ const BillingView: React.FC<BillingViewProps> = ({
     }
   }, [prefill]);
 
-  // ============ DYNAMIC SCRIPT LOADER ============
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      // Check if script already exists
-      const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement;
-      if (existing) {
-        // Check if already loaded via custom flag
-        if ((existing as any).__loaded) {
-          resolve();
-          return;
-        }
-        // Script exists but may still be loading - wait for it
-        const checkLoaded = () => {
-          if (src.includes('html2canvas') && (window as any).html2canvas) {
-            (existing as any).__loaded = true;
-            resolve();
-            return;
-          }
-          if (src.includes('jspdf') && (window as any).jspdf) {
-            (existing as any).__loaded = true;
-            resolve();
-            return;
-          }
-          // Retry after short delay
-          setTimeout(checkLoaded, 100);
-        };
-        checkLoaded();
-        // Timeout after 10 seconds
-        setTimeout(() => reject(new Error(`Timeout loading ${src}`)), 10000);
-        return;
-      }
-      // Create new script
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.onload = () => {
-        (script as any).__loaded = true;
-        resolve();
-      };
-      script.onerror = () => reject(new Error(`Failed to load ${src}`));
-      document.head.appendChild(script);
-    });
-  };
-
   // ============ PDF DOWNLOAD FUNCTION ============
   const downloadPDF = async (elementId: string, filename: string) => {
     setIsDownloading(true);
     try {
-      // Load libraries if not present
-      if (!(window as any).html2canvas) {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-        // Wait a bit for library to initialize
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-      if (!(window as any).jspdf) {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js');
-        // Wait a bit for library to initialize
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
+      // Wait for libraries to be available (they load from index.html)
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
 
-      const html2canvas = (window as any).html2canvas;
-      const jsPDF = (window as any).jspdf?.jsPDF;
+      while (attempts < maxAttempts) {
+        const html2canvas = (window as any).html2canvas;
+        const jsPDF = (window as any).jspdf?.jsPDF;
 
-      if (!html2canvas || !jsPDF) {
-        throw new Error('PDF libraries not loaded. Please refresh and try again.');
-      }
+        if (html2canvas && jsPDF) {
+          // Libraries are ready - generate PDF
+          const element = document.getElementById(elementId);
+          if (!element) {
+            throw new Error('Document element not found');
+          }
 
-      const element = document.getElementById(elementId);
-      if (!element) {
-        throw new Error('Document element not found');
-      }
-
-      // Generate canvas from HTML element
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        imageTimeout: 15000,
-        onclone: (clonedDoc: Document) => {
-          const el = clonedDoc.getElementById(elementId);
-          if (!el) return;
-          // Clean up decorative styles for clean PDF
-          el.style.boxShadow = 'none';
-          el.style.borderRadius = '0';
-          el.style.border = 'none';
-          // Clean clay-cards inside
-          el.querySelectorAll('.clay-card').forEach((card: any) => {
-            card.style.boxShadow = 'none';
-            card.style.borderRadius = '8px';
-            card.style.border = '1px solid #e2e8f0';
+          // Generate canvas from HTML element
+          const canvas = await html2canvas(element, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc: Document) => {
+              const el = clonedDoc.getElementById(elementId);
+              if (!el) return;
+              el.style.boxShadow = 'none';
+              el.style.borderRadius = '0';
+              el.style.border = 'none';
+              el.querySelectorAll('.clay-card').forEach((card: any) => {
+                card.style.boxShadow = 'none';
+                card.style.borderRadius = '8px';
+                card.style.border = '1px solid #e2e8f0';
+              });
+              el.querySelectorAll('[class*="shadow"]').forEach((s: any) => {
+                s.style.boxShadow = 'none';
+              });
+            }
           });
-          // Remove hover effects
-          el.querySelectorAll('[class*="shadow"]').forEach((s: any) => {
-            s.style.boxShadow = 'none';
-          });
+
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pageWidth = 210;
+          const pageHeight = 297;
+          const margin = 5;
+          const contentWidth = pageWidth - (margin * 2);
+          const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+          if (imgHeight <= pageHeight - (margin * 2)) {
+            pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
+          } else {
+            let heightLeft = imgHeight;
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
+            heightLeft -= (pageHeight - margin * 2);
+            position = -(pageHeight - margin * 2);
+            while (heightLeft > 0) {
+              pdf.addPage();
+              pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgHeight);
+              heightLeft -= (pageHeight - margin * 2);
+              position -= (pageHeight - margin * 2);
+            }
+          }
+
+          pdf.save(filename);
+          setIsDownloading(false);
+          return;
         }
-      });
 
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 5;
-      const contentWidth = pageWidth - (margin * 2);
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-      // Single page
-      if (imgHeight <= pageHeight - (margin * 2)) {
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
-      } else {
-        // Multi-page handling
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // First page
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
-        heightLeft -= (pageHeight - margin * 2);
-        position = -(pageHeight - margin * 2);
-
-        // Additional pages
-        while (heightLeft > 0) {
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgHeight);
-          heightLeft -= (pageHeight - margin * 2);
-          position -= (pageHeight - margin * 2);
-        }
+        // Wait 100ms before checking again
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
       }
 
-      pdf.save(filename);
+      // If we get here, libraries didn't load
+      throw new Error('PDF libraries not available. Please refresh the page and try again.');
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(err.message || 'Error generating PDF. Please refresh the page and try again.');
-    } finally {
       setIsDownloading(false);
     }
   };
