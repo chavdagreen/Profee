@@ -70,8 +70,14 @@ const App: React.FC = () => {
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
   const [targetProfileTab, setTargetProfileTab] = useState<'details' | 'financials' | 'proceedings'>('details');
 
-  // Legal pages state (for auth screen)
-  const [showLegalPage, setShowLegalPage] = useState<'privacy' | 'terms' | null>(null);
+  // Legal pages state (for auth screen and direct URL access)
+  const [showLegalPage, setShowLegalPage] = useState<'privacy' | 'terms' | null>(() => {
+    // Check URL on initial load for direct access to legal pages
+    const path = window.location.pathname;
+    if (path === '/privacy') return 'privacy';
+    if (path === '/terms') return 'terms';
+    return null;
+  });
 
   // Data state (loaded from Supabase)
   const [billingSettings, setBillingSettings] = useState<BillingSettings>(DEFAULT_BILLING_SETTINGS);
@@ -299,20 +305,32 @@ const App: React.FC = () => {
     );
   }
 
+  // ======= LEGAL PAGES (accessible to everyone via URL) =======
+  const handleShowLegalPage = (page: 'privacy' | 'terms') => {
+    setShowLegalPage(page);
+    window.history.pushState({}, '', `/${page}`);
+  };
+
+  const handleCloseLegalPage = () => {
+    setShowLegalPage(null);
+    window.history.pushState({}, '', '/');
+  };
+
+  // Show legal pages if requested (works for both logged-in and logged-out users)
+  if (showLegalPage === 'privacy') {
+    return <PrivacyPolicy onBack={handleCloseLegalPage} />;
+  }
+  if (showLegalPage === 'terms') {
+    return <TermsOfService onBack={handleCloseLegalPage} />;
+  }
+
   // ======= AUTH SCREEN =======
   if (!user) {
-    // Show legal pages if requested
-    if (showLegalPage === 'privacy') {
-      return <PrivacyPolicy onBack={() => setShowLegalPage(null)} />;
-    }
-    if (showLegalPage === 'terms') {
-      return <TermsOfService onBack={() => setShowLegalPage(null)} />;
-    }
     return (
       <AuthView
         onAuthSuccess={loadAllData}
-        onShowPrivacy={() => setShowLegalPage('privacy')}
-        onShowTerms={() => setShowLegalPage('terms')}
+        onShowPrivacy={() => handleShowLegalPage('privacy')}
+        onShowTerms={() => handleShowLegalPage('terms')}
       />
     );
   }
@@ -449,6 +467,17 @@ const App: React.FC = () => {
           {activeView === 'proceedings' && <ProceedingsView hearings={hearings} clients={clients} setHearings={handleSetHearings} onBillMatter={handleBillMatter} />}
           {activeView === 'billing' && <BillingView invoices={invoices} setInvoices={handleSetInvoices} clients={clients} receipts={receipts} setReceipts={handleSetReceipts} groups={groups} settings={billingSettings} setSettings={handleSetBillingSettings} prefill={pendingInvoiceFromMatter} onPrefillProcessed={() => setPendingInvoiceFromMatter(null)} />}
         </div>
+
+        {/* Footer with Legal Links */}
+        <footer className="mt-12 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+          <p className="text-xs text-slate-400">
+            <button onClick={() => handleShowLegalPage('privacy')} className="hover:text-indigo-500 hover:underline">Privacy Policy</button>
+            <span className="mx-2">&bull;</span>
+            <button onClick={() => handleShowLegalPage('terms')} className="hover:text-indigo-500 hover:underline">Terms of Service</button>
+            <span className="mx-2">&bull;</span>
+            <span>&copy; 2026 Profee. All rights reserved.</span>
+          </p>
+        </footer>
       </main>
     </div>
   );
