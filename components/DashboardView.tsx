@@ -1,11 +1,12 @@
 
 import React, { useMemo, useState } from 'react';
 import { Client, Hearing, Invoice, View } from '../types';
-import { 
-  Calendar as CalendarIcon, UserCheck, TrendingUp, AlertCircle, 
-  ChevronLeft, ChevronRight, Bell, ArrowUpRight, RefreshCw, 
+import {
+  Calendar as CalendarIcon, UserCheck, TrendingUp, AlertCircle,
+  ChevronLeft, ChevronRight, Bell, ArrowUpRight, RefreshCw,
   Smartphone, CheckCircle2, X, Gavel, Scale, Building2, Flame
 } from 'lucide-react';
+import { syncAllHearingsToGoogleCalendar } from '../services/database';
 
 interface DashboardViewProps {
   clients: Client[];
@@ -20,17 +21,52 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
   const [drillDown, setDrillDown] = useState<{ type: 'notices' | 'hearings' | 'daily_notices' | 'daily_hearings'; data: Hearing[] } | null>(null);
   const [dayEvents, setDayEvents] = useState<{ day: number; events: Hearing[] } | null>(null);
 
-  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
-  const currentYear = new Date().getFullYear();
+  // Calendar state - track displayed month/year
+  const now = new Date();
+  const [displayMonth, setDisplayMonth] = useState(now.getMonth()); // 0-indexed
+  const [displayYear, setDisplayYear] = useState(now.getFullYear());
 
-  const calendarDays = useMemo(() => {
-    const days = [];
-    for (let i = 1; i <= 31; i++) days.push(i);
-    return days;
-  }, []);
+  const displayMonthName = new Date(displayYear, displayMonth).toLocaleString('default', { month: 'long' });
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Proper calendar calculation
+  const calendarData = useMemo(() => {
+    const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+    const firstDayOfWeek = new Date(displayYear, displayMonth, 1).getDay(); // 0=Sunday
+    const days: number[] = [];
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+    return { daysInMonth, firstDayOfWeek, days };
+  }, [displayMonth, displayYear]);
+
+  const goToPrevMonth = () => {
+    if (displayMonth === 0) {
+      setDisplayMonth(11);
+      setDisplayYear(displayYear - 1);
+    } else {
+      setDisplayMonth(displayMonth - 1);
+    }
+    setDayEvents(null);
+  };
+
+  const goToNextMonth = () => {
+    if (displayMonth === 11) {
+      setDisplayMonth(0);
+      setDisplayYear(displayYear + 1);
+    } else {
+      setDisplayMonth(displayMonth + 1);
+    }
+    setDayEvents(null);
+  };
+
+  const goToToday = () => {
+    setDisplayMonth(now.getMonth());
+    setDisplayYear(now.getFullYear());
+    setDayEvents(null);
+  };
+
+  const todayStr = now.toISOString().split('T')[0];
   const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const todayDay = now.getDate();
+  const isCurrentMonth = displayMonth === now.getMonth() && displayYear === now.getFullYear();
 
   const today = new Date();
   const lastSevenDays = new Date();
@@ -62,9 +98,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
     return hearings.filter(h => h.hearingDate === todayStr);
   }, [hearings, todayStr]);
 
-  const handleSync = () => {
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  const handleSync = async () => {
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 2000);
+    setSyncResult(null);
+    try {
+      const count = await syncAllHearingsToGoogleCalendar(hearings);
+      if (count > 0) {
+        setSyncResult(`${count} hearing(s) synced to Google Calendar`);
+      } else {
+        setSyncResult('No upcoming hearings to sync, or Google Calendar not connected');
+      }
+    } catch {
+      setSyncResult('Sync failed. Please sign in with Google first.');
+    }
+    setIsSyncing(false);
+    setTimeout(() => setSyncResult(null), 4000);
   };
 
   const getForumColor = (forum: string) => {
@@ -73,6 +123,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
       case 'CIT(A)': return 'bg-indigo-600';
       case 'ITAT': return 'bg-purple-600';
       default: return 'bg-slate-600';
+    }
+  };
+
+  const getForumDotColor = (forum: string) => {
+    switch (forum) {
+      case 'AO': return 'bg-blue-500';
+      case 'CIT(A)': return 'bg-indigo-500';
+      case 'ITAT': return 'bg-purple-500';
+      default: return 'bg-slate-500';
     }
   };
 
@@ -86,7 +145,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
   };
 
   const PulseCard = ({ title, count, icon: Icon, color, onClick, index, label = "7-Day Pulse" }: any) => (
-    <button 
+    <button
       onClick={onClick}
       style={{ animationDelay: `${index * 150}ms` }}
       className={`clay-card p-6 border-none flex flex-col justify-between transition-all hover:scale-[1.05] hover:rotate-1 text-left group relative overflow-hidden animate-in slide-in-from-top-4`}
@@ -97,16 +156,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
           <Icon size={32} />
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-indigo-500 transition-colors">{label}</span>
+          <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-500 transition-colors">{label}</span>
           <ArrowUpRight size={18} className="text-slate-300 mt-1" />
         </div>
       </div>
       <div>
-        <p className="text-slate-400 dark:text-slate-500 font-black text-[11px] uppercase tracking-widest mb-1">{title}</p>
+        <p className="text-slate-400 dark:text-slate-500 font-bold text-[11px] mb-1">{title}</p>
         <div className="flex items-baseline gap-3">
           <h3 className="text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">{count}</h3>
           <span className={`text-[10px] font-bold ${count > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-300'} bg-opacity-10 px-2 py-0.5 rounded-full`}>
-            {count > 0 ? 'ACTION' : 'CLEAR'}
+            {count > 0 ? 'Action Needed' : 'All Clear'}
           </span>
         </div>
       </div>
@@ -119,12 +178,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
         <div>
           <h2 className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter leading-none mb-2">Practice Overview</h2>
-          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Connected to Supabase DB & Google Cloud</p>
+          <p className="text-slate-400 font-bold text-[11px]">Connected to Supabase DB & Google Cloud</p>
         </div>
         <div className="flex items-center gap-4">
            <div className="clay-card px-6 py-3 border-none flex items-center gap-3 bg-white/80 backdrop-blur-md">
              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live DB Sync</span>
+             <span className="text-[10px] font-bold text-slate-500">Live DB Sync</span>
            </div>
            <button className="clay-button p-4 rounded-3xl relative"><Bell size={24}/><div className="absolute top-3 right-3 w-3 h-3 bg-rose-500 rounded-full border-4 border-indigo-600"></div></button>
         </div>
@@ -132,38 +191,38 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
 
       {/* PULSE CARDS (Grid of 4) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <PulseCard 
+        <PulseCard
           index={0}
-          title="New Intake (Today/Yesterday)" 
-          count={noticesTodayOrYesterday.length} 
-          icon={Flame} 
-          color="bg-orange-500" 
+          title="New Intake (Today/Yesterday)"
+          count={noticesTodayOrYesterday.length}
+          icon={Flame}
+          color="bg-orange-500"
           label="Real-time Alert"
           onClick={() => setDrillDown({ type: 'daily_notices', data: noticesTodayOrYesterday })}
         />
-        <PulseCard 
+        <PulseCard
           index={1}
-          title="Today's Hearings" 
-          count={hearingsScheduledToday.length} 
-          icon={CheckCircle2} 
-          color="bg-emerald-600" 
+          title="Today's Hearings"
+          count={hearingsScheduledToday.length}
+          icon={CheckCircle2}
+          color="bg-emerald-600"
           label="Daily Schedule"
           onClick={() => setDrillDown({ type: 'daily_hearings', data: hearingsScheduledToday })}
         />
-        <PulseCard 
+        <PulseCard
           index={2}
-          title="Notices (Last 7 Days)" 
-          count={recentNotices.length} 
-          icon={AlertCircle} 
-          color="bg-rose-500" 
+          title="Notices (Last 7 Days)"
+          count={recentNotices.length}
+          icon={AlertCircle}
+          color="bg-rose-500"
           onClick={() => setDrillDown({ type: 'notices', data: recentNotices })}
         />
-        <PulseCard 
+        <PulseCard
           index={3}
-          title="Hearings (Next 7 Days)" 
-          count={upcomingHearings.length} 
-          icon={CalendarIcon} 
-          color="bg-indigo-600" 
+          title="Hearings (Next 7 Days)"
+          count={upcomingHearings.length}
+          icon={CalendarIcon}
+          color="bg-indigo-600"
           onClick={() => setDrillDown({ type: 'hearings', data: upcomingHearings })}
         />
       </div>
@@ -174,19 +233,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
           <div className="clay-card w-full max-w-4xl bg-white dark:bg-slate-800 border-none shadow-3xl overflow-hidden animate-in zoom-in-95 duration-500">
              <div className="p-8 border-b border-slate-50 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
                 <div>
-                   <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">
-                     {drillDown.type === 'notices' ? 'Notice Issuance (7D)' : 
-                      drillDown.type === 'hearings' ? 'Hearing Forecast (7D)' : 
+                   <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">
+                     {drillDown.type === 'notices' ? 'Notice Issuance (7D)' :
+                      drillDown.type === 'hearings' ? 'Hearing Forecast (7D)' :
                       drillDown.type === 'daily_notices' ? 'Newly Added Notices' : "Today's Representation Schedule"}
                    </h3>
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Click any row to open client proceedings</p>
+                   <p className="text-[11px] font-bold text-slate-400 mt-1">Click any row to open client proceedings</p>
                 </div>
                 <button onClick={() => setDrillDown(null)} className="p-3 bg-white dark:bg-slate-700 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm"><X /></button>
              </div>
              <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-8">
                 <table className="w-full text-left font-bold text-sm">
                    <thead>
-                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b dark:border-slate-700">
+                      <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b dark:border-slate-700">
                          <th className="px-4 py-4">Client Name</th>
                          <th className="px-4 py-4">AY</th>
                          <th className="px-4 py-4">Matter Type</th>
@@ -196,16 +255,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                    </thead>
                    <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                       {drillDown.data.map((h, i) => (
-                        <tr 
-                          key={h.id} 
-                          style={{ animationDelay: `${i * 50}ms` }} 
+                        <tr
+                          key={h.id}
+                          style={{ animationDelay: `${i * 50}ms` }}
                           onClick={() => { setDrillDown(null); onSelectClient(h.clientId, 'proceedings'); }}
                           className="hover:bg-indigo-50 dark:hover:bg-slate-700/50 transition-colors animate-in slide-in-from-left-4 cursor-pointer group"
                         >
-                           <td className="px-4 py-6 text-slate-800 dark:text-white font-black uppercase tracking-tight group-hover:text-indigo-600">{h.clientName}</td>
+                           <td className="px-4 py-6 text-slate-800 dark:text-white font-black tracking-tight group-hover:text-indigo-600">{h.clientName}</td>
                            <td className="px-4 py-6 text-indigo-600">AY {h.assessmentYear}</td>
                            <td className="px-4 py-6 text-slate-500 text-xs">{h.caseType}</td>
-                           <td className="px-4 py-6 text-slate-400 text-[10px]">{drillDown.type === 'notices' || drillDown.type === 'daily_notices' ? h.issueDate : h.hearingDate}</td>
+                           <td className="px-4 py-6 text-slate-400 text-[11px]">{drillDown.type === 'notices' || drillDown.type === 'daily_notices' ? h.issueDate : h.hearingDate}</td>
                            <td className="px-4 py-6 text-right"><span className={`px-3 py-1 ${getForumColor(h.forum)} text-white rounded-lg text-[10px] font-black uppercase`}>{h.forum}</span></td>
                         </tr>
                       ))}
@@ -225,36 +284,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
         <button onClick={() => onNavigate('clients')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <UserCheck size={24} className="text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client Base</p>
+           <p className="text-[11px] font-bold text-slate-400">Client Base</p>
            <h4 className="text-3xl font-black text-slate-800 dark:text-white">{clients.length}</h4>
         </button>
         <button onClick={() => onNavigate('proceedings')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <CalendarIcon size={24} className="text-indigo-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Hearings</p>
+           <p className="text-[11px] font-bold text-slate-400">Live Hearings</p>
            <h4 className="text-3xl font-black text-slate-800 dark:text-white">{hearings.length}</h4>
         </button>
         <button onClick={() => onNavigate('billing')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <TrendingUp size={24} className="text-emerald-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue</p>
-           <h4 className="text-3xl font-black text-slate-800 dark:text-white">₹1.4L</h4>
+           <p className="text-[11px] font-bold text-slate-400">Revenue</p>
+           <h4 className="text-3xl font-black text-slate-800 dark:text-white">₹{invoices.reduce((s, i) => s + (i.total || 0), 0).toLocaleString()}</h4>
         </button>
         <button onClick={() => onNavigate('billing')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <AlertCircle size={24} className="text-amber-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstandings</p>
-           <h4 className="text-3xl font-black text-slate-800 dark:text-white">₹45K</h4>
+           <p className="text-[11px] font-bold text-slate-400">Outstandings</p>
+           <h4 className="text-3xl font-black text-slate-800 dark:text-white">₹{invoices.filter(i => i.status === 'Unpaid').reduce((s, i) => s + (i.total || 0), 0).toLocaleString()}</h4>
         </button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-        {/* Glow Statutory Calendar */}
+        {/* Litigation Calendar */}
         <div className="xl:col-span-2 clay-card p-10 border-none bg-white dark:bg-slate-800 shadow-2xl animate-in slide-in-from-left-8 duration-700 relative">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-6">
-              <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Litigation Calendar</h3>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Litigation Calendar</h3>
               <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600">
                  <div className={`flex items-center gap-2 ${isSyncing ? 'text-indigo-600' : 'text-slate-400'}`}>
                     <Smartphone size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Syncing Google...' : 'G-Sync Active'}</span>
+                    <span className="text-[10px] font-bold">{isSyncing ? 'Syncing Google...' : 'G-Sync Active'}</span>
                  </div>
                  <button onClick={handleSync} className={`transition-all ${isSyncing ? 'animate-spin text-indigo-600' : 'text-slate-300 hover:text-indigo-600'}`}>
                     <RefreshCw size={14} />
@@ -262,37 +321,73 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
               </div>
             </div>
             <div className="flex items-center gap-2">
-               <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mr-4">{currentMonth} {currentYear}</span>
-               <button className="p-3 bg-slate-50 dark:bg-slate-700 rounded-2xl hover:bg-indigo-50 transition-all"><ChevronLeft size={20} /></button>
-               <button className="p-3 bg-slate-50 dark:bg-slate-700 rounded-2xl hover:bg-indigo-50 transition-all"><ChevronRight size={20} /></button>
+               <button onClick={goToToday} className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mr-2 hover:underline">Today</button>
+               <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 mr-4">{displayMonthName} {displayYear}</span>
+               <button onClick={goToPrevMonth} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-2xl hover:bg-indigo-50 transition-all"><ChevronLeft size={20} /></button>
+               <button onClick={goToNextMonth} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-2xl hover:bg-indigo-50 transition-all"><ChevronRight size={20} /></button>
             </div>
           </div>
-          
+
+          {/* Sync Result Toast */}
+          {syncResult && (
+            <div className="mb-4 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-2xl text-xs font-bold text-indigo-600 dark:text-indigo-300 animate-in fade-in duration-300">
+              {syncResult}
+            </div>
+          )}
+
+          {/* Forum Legend */}
+          <div className="flex items-center gap-6 mb-6">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-[10px] font-bold text-slate-400">AO</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-500"></div><span className="text-[10px] font-bold text-slate-400">CIT(A)</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500"></div><span className="text-[10px] font-bold text-slate-400">ITAT</span></div>
+          </div>
+
           <div className="grid grid-cols-7 gap-4">
-            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
-              <div key={day} className="text-[10px] font-black text-slate-400 text-center pb-4 tracking-widest">{day}</div>
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-[10px] font-bold text-slate-400 text-center pb-4">{day}</div>
             ))}
-            {calendarDays.map(day => {
-              const dateStr = `2024-06-${day.toString().padStart(2, '0')}`;
+            {/* Empty cells for first day offset */}
+            {Array.from({ length: calendarData.firstDayOfWeek }).map((_, i) => (
+              <div key={`empty-${i}`} className="aspect-square"></div>
+            ))}
+            {calendarData.days.map(day => {
+              const monthStr = String(displayMonth + 1).padStart(2, '0');
+              const dayStr = day.toString().padStart(2, '0');
+              const dateStr = `${displayYear}-${monthStr}-${dayStr}`;
               const dayHearings = hearings.filter(h => h.hearingDate === dateStr);
+              const dayNotices = hearings.filter(h => h.issueDate === dateStr);
               const hasHearing = dayHearings.length > 0;
+              const hasNotice = dayNotices.length > 0;
+              const isToday = isCurrentMonth && day === todayDay;
               const primaryForum = hasHearing ? dayHearings[0].forum : null;
-              const colorClass = primaryForum ? getForumColor(primaryForum) : 'bg-white dark:bg-slate-700';
+              const colorClass = primaryForum ? getForumColor(primaryForum) : '';
 
               return (
-                <button 
-                  key={day} 
+                <button
+                  key={day}
                   onClick={() => hasHearing && setDayEvents({ day, events: dayHearings })}
                   className={`calendar-day-glow aspect-square rounded-[1.8rem] border-2 flex flex-col items-center justify-center relative transition-all duration-300 font-black
-                    ${hasHearing 
-                      ? `${colorClass} text-white border-transparent shadow-xl` 
-                      : 'bg-white dark:bg-slate-700 border-slate-50 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:border-purple-200'}
+                    ${hasHearing
+                      ? `${colorClass} text-white border-transparent shadow-xl`
+                      : isToday
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300'
+                        : 'bg-white dark:bg-slate-700 border-slate-50 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:border-purple-200'}
                   `}
                 >
                   <span className="text-sm">{day}</span>
                   {hasHearing && dayHearings.length > 1 && (
-                    <div className="absolute bottom-2 bg-white/20 text-[8px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
-                      +{dayHearings.length - 1} More
+                    <div className="absolute bottom-1.5 bg-white/20 text-[8px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                      +{dayHearings.length - 1}
+                    </div>
+                  )}
+                  {hasHearing && dayHearings.length === 1 && (
+                    <div className="absolute bottom-1.5 flex gap-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
+                    </div>
+                  )}
+                  {!hasHearing && hasNotice && (
+                    <div className="absolute bottom-1.5 flex gap-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
                     </div>
                   )}
                 </button>
@@ -305,8 +400,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
             <div className="absolute inset-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-[2rem] p-10 flex flex-col animate-in zoom-in-95 duration-300">
                <div className="flex justify-between items-center mb-8">
                   <div>
-                    <h4 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Events for June {dayEvents.day}</h4>
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Select an event to view full proceedings</p>
+                    <h4 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Events for {displayMonthName} {dayEvents.day}</h4>
+                    <p className="text-xs font-bold text-slate-400 mt-1">Select an event to view full proceedings</p>
                   </div>
                   <button onClick={() => setDayEvents(null)} className="p-4 bg-white dark:bg-slate-800 rounded-3xl hover:bg-rose-50 hover:text-rose-500 shadow-xl transition-all border border-slate-100 dark:border-slate-700"><X /></button>
                </div>
@@ -314,7 +409,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                   {dayEvents.events.map((e, idx) => {
                     const ForumIcon = getForumIcon(e.forum);
                     return (
-                      <button 
+                      <button
                         key={e.id}
                         onClick={() => { setDayEvents(null); onSelectClient(e.clientId, 'proceedings'); }}
                         style={{ animationDelay: `${idx * 100}ms` }}
@@ -325,14 +420,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                                <ForumIcon size={24} />
                             </div>
                             <div className="text-left">
-                               <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Matter: {e.forum}</p>
-                               <h5 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">{e.clientName}</h5>
-                               <p className="text-xs font-bold text-slate-400 mt-0.5">{e.caseType} • AY {e.assessmentYear}</p>
+                               <p className="text-[10px] font-bold text-indigo-600">Matter: {e.forum}</p>
+                               <h5 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">{e.clientName}</h5>
+                               <p className="text-xs font-bold text-slate-400 mt-0.5">{e.caseType} &bull; AY {e.assessmentYear}</p>
                             </div>
                          </div>
                          <div className="flex items-center gap-4">
                             <div className="text-right">
-                               <p className="text-[9px] font-black text-slate-300 uppercase">Scheduled At</p>
+                               <p className="text-[9px] font-bold text-slate-300">Scheduled At</p>
                                <p className="text-sm font-black text-slate-600 dark:text-slate-300">{e.time}</p>
                             </div>
                             <ChevronRight size={24} className="text-slate-200 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
@@ -345,26 +440,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
           )}
         </div>
 
-        {/* Existing Notifications List */}
+        {/* Notifications List */}
         <div className="clay-card p-8 border-none flex flex-col bg-white dark:bg-slate-800 shadow-2xl animate-in slide-in-from-right-8 duration-700 h-full max-h-[600px]">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3">
+            <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
               <Bell size={22} className="text-rose-500 animate-pulse" /> Alerts
             </h3>
           </div>
           <div className="space-y-6 overflow-y-auto custom-scrollbar flex-1 pr-2">
             {hearings.map((h, i) => (
-              <button 
-                key={h.id} 
+              <button
+                key={h.id}
                 onClick={() => onSelectClient(h.clientId, 'proceedings')}
                 className="w-full p-5 rounded-[2rem] bg-slate-50 dark:bg-slate-900/40 border border-transparent hover:border-indigo-100 hover:bg-white dark:hover:bg-slate-800 transition-all group text-left"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-3 py-1 rounded-xl uppercase tracking-widest`}>{h.forum}</span>
+                  <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-3 py-1 rounded-xl uppercase`}>{h.forum}</span>
                   <CheckCircle2 size={14} className="text-slate-200 group-hover:text-emerald-500 transition-colors" />
                 </div>
-                <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight uppercase tracking-tight mb-2 group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
-                <p className="text-[10px] font-bold text-slate-400">{h.hearingDate} • {h.caseType}</p>
+                <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight mb-2 group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
+                <p className="text-[10px] font-bold text-slate-400">{h.hearingDate} &bull; {h.caseType}</p>
               </button>
             ))}
           </div>

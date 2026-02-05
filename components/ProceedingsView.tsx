@@ -25,7 +25,7 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
       className={`clay-card p-6 border-none flex flex-col items-center gap-3 transition-all ${selectedForum === forumKey ? `${color} text-white scale-105 shadow-xl` : 'bg-white dark:bg-slate-800 text-slate-500'}`}
     >
       <div className={`p-3 rounded-2xl ${selectedForum === forumKey ? 'bg-white/20' : 'bg-slate-50 dark:bg-slate-700'}`}><Icon size={24} /></div>
-      <div className="text-center"><h4 className="font-black text-sm uppercase tracking-tighter">{title}</h4><p className="text-[10px] font-bold opacity-70">{count} Active Cases</p></div>
+      <div className="text-center"><h4 className="font-black text-sm tracking-tight">{title}</h4><p className="text-[10px] font-bold opacity-70">{count} Active Cases</p></div>
     </button>
   );
 
@@ -33,8 +33,8 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
     <div className="space-y-8 animate-in fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Proceedings Manager</h2>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Direct Departmental Representation</p>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Proceedings Manager</h2>
+          <p className="text-xs font-bold text-slate-400 tracking-wide mt-1">Direct Departmental Representation</p>
         </div>
         <button onClick={() => setSubView('add')} className="clay-button px-6 py-3 flex items-center gap-2 font-black shadow-lg"><Plus size={18} /> New Proceeding</button>
       </div>
@@ -47,7 +47,7 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
 
       <div className="clay-card border-none bg-white dark:bg-slate-800 overflow-hidden shadow-2xl">
         <div className="p-6 border-b border-slate-50 dark:border-slate-700 bg-slate-50/30">
-          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Info size={14} className="text-indigo-500" /> Active Matters at {selectedForum}</h3>
+          <h3 className="text-xs font-black text-slate-400 tracking-wide flex items-center gap-2"><Info size={14} className="text-indigo-500" /> Active Matters at {selectedForum}</h3>
         </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-700">
           {filteredHearings.map(h => (
@@ -55,17 +55,17 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
               <div className="flex items-center gap-5 flex-1 min-w-0">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg group-hover:scale-110 transition-transform">{h.clientName.charAt(0)}</div>
                 <div className="truncate">
-                  <h4 className="font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight truncate">{h.clientName}</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{h.caseType} • AY {h.assessmentYear}</p>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 tracking-tight truncate">{h.clientName}</h4>
+                  <p className="text-[10px] font-bold text-slate-400 tracking-wide">{h.caseType} • AY {h.assessmentYear}</p>
                 </div>
               </div>
               <div className="flex items-center gap-8">
                 <div className="text-center hidden sm:block">
-                   <p className="text-[10px] font-black text-slate-400 uppercase">Next Hearing</p>
+                   <p className="text-[10px] font-bold text-slate-400">Next Hearing</p>
                    <p className="font-bold text-slate-800 dark:text-slate-200 text-xs">{h.hearingDate}</p>
                 </div>
                 <div className="text-center">
-                   <p className="text-[10px] font-black text-slate-400 uppercase">Professional Fee</p>
+                   <p className="text-[10px] font-bold text-slate-400">Professional Fee</p>
                    <p className="font-black text-indigo-600">₹{h.quotedFees?.toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-2">

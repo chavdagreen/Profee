@@ -131,6 +131,87 @@ export async function signIn(email: string, password: string) {
   return data;
 }
 
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+      scopes: 'https://www.googleapis.com/auth/calendar.events',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// ============================================================
+// GOOGLE CALENDAR SYNC
+// ============================================================
+
+export async function getGoogleAccessToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.provider_token || null;
+}
+
+export async function syncHearingToGoogleCalendar(hearing: Hearing): Promise<boolean> {
+  const token = await getGoogleAccessToken();
+  if (!token) return false;
+
+  const startDate = hearing.hearingDate;
+  const startTime = hearing.time || '10:00';
+  const startDateTime = `${startDate}T${startTime}:00`;
+  const endHour = parseInt(startTime.split(':')[0]) + 1;
+  const endDateTime = `${startDate}T${endHour.toString().padStart(2, '0')}:${startTime.split(':')[1]}:00`;
+
+  const event = {
+    summary: `${hearing.forum} Hearing - ${hearing.clientName}`,
+    description: `Case: ${hearing.caseType}\nAY: ${hearing.assessmentYear}\nStatus: ${hearing.status}${hearing.description ? '\n\n' + hearing.description : ''}`,
+    start: {
+      dateTime: startDateTime,
+      timeZone: 'Asia/Kolkata',
+    },
+    end: {
+      dateTime: endDateTime,
+      timeZone: 'Asia/Kolkata',
+    },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'popup', minutes: 1440 },
+        { method: 'popup', minutes: 60 },
+      ],
+    },
+  };
+
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(event),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function syncAllHearingsToGoogleCalendar(hearings: Hearing[]): Promise<number> {
+  let synced = 0;
+  for (const h of hearings) {
+    if (h.status === 'Upcoming' || h.status === 'Adjourned') {
+      const ok = await syncHearingToGoogleCalendar(h);
+      if (ok) synced++;
+    }
+  }
+  return synced;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
