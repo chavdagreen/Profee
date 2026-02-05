@@ -26,6 +26,7 @@ import AuthView from './components/AuthView';
 import ProfileSetupView from './components/ProfileSetupView';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
+import LandingPage from './components/LandingPage';
 import { generateAppLogo } from './services/geminiService';
 import * as db from './services/database';
 import { supabase } from './services/supabase';
@@ -70,13 +71,14 @@ const App: React.FC = () => {
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
   const [targetProfileTab, setTargetProfileTab] = useState<'details' | 'financials' | 'proceedings'>('details');
 
-  // Legal pages state (for auth screen and direct URL access)
-  const [showLegalPage, setShowLegalPage] = useState<'privacy' | 'terms' | null>(() => {
-    // Check URL on initial load for direct access to legal pages
+  // Page routing state (for public pages)
+  const [currentPage, setCurrentPage] = useState<'landing' | 'login' | 'privacy' | 'terms'>(() => {
+    // Check URL on initial load for direct access to pages
     const path = window.location.pathname;
     if (path === '/privacy') return 'privacy';
     if (path === '/terms') return 'terms';
-    return null;
+    if (path === '/login') return 'login';
+    return 'landing';
   });
 
   // Data state (loaded from Supabase)
@@ -305,34 +307,35 @@ const App: React.FC = () => {
     );
   }
 
-  // ======= LEGAL PAGES (accessible to everyone via URL) =======
-  const handleShowLegalPage = (page: 'privacy' | 'terms') => {
-    setShowLegalPage(page);
-    window.history.pushState({}, '', `/${page}`);
+  // ======= PAGE NAVIGATION (for public pages) =======
+  const navigateTo = (page: 'landing' | 'login' | 'privacy' | 'terms') => {
+    setCurrentPage(page);
+    const path = page === 'landing' ? '/' : `/${page}`;
+    window.history.pushState({}, '', path);
   };
 
-  const handleCloseLegalPage = () => {
-    setShowLegalPage(null);
-    window.history.pushState({}, '', '/');
-  };
-
-  // Show legal pages if requested (works for both logged-in and logged-out users)
-  if (showLegalPage === 'privacy') {
-    return <PrivacyPolicy onBack={handleCloseLegalPage} />;
+  // Show public pages (accessible to everyone)
+  if (currentPage === 'privacy') {
+    return <PrivacyPolicy onBack={() => navigateTo('landing')} />;
   }
-  if (showLegalPage === 'terms') {
-    return <TermsOfService onBack={handleCloseLegalPage} />;
+  if (currentPage === 'terms') {
+    return <TermsOfService onBack={() => navigateTo('landing')} />;
   }
 
-  // ======= AUTH SCREEN =======
+  // ======= NOT LOGGED IN =======
   if (!user) {
-    return (
-      <AuthView
-        onAuthSuccess={loadAllData}
-        onShowPrivacy={() => handleShowLegalPage('privacy')}
-        onShowTerms={() => handleShowLegalPage('terms')}
-      />
-    );
+    // Show login page if requested
+    if (currentPage === 'login') {
+      return (
+        <AuthView
+          onAuthSuccess={loadAllData}
+          onShowPrivacy={() => navigateTo('privacy')}
+          onShowTerms={() => navigateTo('terms')}
+        />
+      );
+    }
+    // Show landing page by default
+    return <LandingPage onGetStarted={() => navigateTo('login')} />;
   }
 
   // ======= PROFILE SETUP SCREEN (first-time users) =======
@@ -471,9 +474,9 @@ const App: React.FC = () => {
         {/* Footer with Legal Links */}
         <footer className="mt-12 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
           <p className="text-xs text-slate-400">
-            <button onClick={() => handleShowLegalPage('privacy')} className="hover:text-indigo-500 hover:underline">Privacy Policy</button>
+            <button onClick={() => navigateTo('privacy')} className="hover:text-indigo-500 hover:underline">Privacy Policy</button>
             <span className="mx-2">&bull;</span>
-            <button onClick={() => handleShowLegalPage('terms')} className="hover:text-indigo-500 hover:underline">Terms of Service</button>
+            <button onClick={() => navigateTo('terms')} className="hover:text-indigo-500 hover:underline">Terms of Service</button>
             <span className="mx-2">&bull;</span>
             <span>&copy; 2026 Profee. All rights reserved.</span>
           </p>
