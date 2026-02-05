@@ -79,21 +79,42 @@ const BillingView: React.FC<BillingViewProps> = ({
   // ============ DYNAMIC SCRIPT LOADER ============
   const loadScript = (src: string): Promise<void> => {
     return new Promise((resolve, reject) => {
+      // Check if script already exists
       const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement;
       if (existing) {
-        // Script tag exists - check if it's already loaded
+        // Check if already loaded via custom flag
         if ((existing as any).__loaded) {
           resolve();
           return;
         }
-        // Wait for it to finish loading
-        existing.addEventListener('load', () => resolve());
-        existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)));
+        // Script exists but may still be loading - wait for it
+        const checkLoaded = () => {
+          if (src.includes('html2canvas') && (window as any).html2canvas) {
+            (existing as any).__loaded = true;
+            resolve();
+            return;
+          }
+          if (src.includes('jspdf') && (window as any).jspdf) {
+            (existing as any).__loaded = true;
+            resolve();
+            return;
+          }
+          // Retry after short delay
+          setTimeout(checkLoaded, 100);
+        };
+        checkLoaded();
+        // Timeout after 10 seconds
+        setTimeout(() => reject(new Error(`Timeout loading ${src}`)), 10000);
         return;
       }
+      // Create new script
       const script = document.createElement('script');
       script.src = src;
-      script.onload = () => { (script as any).__loaded = true; resolve(); };
+      script.async = true;
+      script.onload = () => {
+        (script as any).__loaded = true;
+        resolve();
+      };
       script.onerror = () => reject(new Error(`Failed to load ${src}`));
       document.head.appendChild(script);
     });
@@ -103,29 +124,38 @@ const BillingView: React.FC<BillingViewProps> = ({
   const downloadPDF = async (elementId: string, filename: string) => {
     setIsDownloading(true);
     try {
-      // Dynamically ensure libraries are loaded
+      // Load libraries if not present
       if (!(window as any).html2canvas) {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+        // Wait a bit for library to initialize
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-      if (!(window as any).jspdf?.jsPDF) {
+      if (!(window as any).jspdf) {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js');
+        // Wait a bit for library to initialize
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
       const html2canvas = (window as any).html2canvas;
       const jsPDF = (window as any).jspdf?.jsPDF;
+
       if (!html2canvas || !jsPDF) {
-        alert('Could not load PDF libraries. Please check your internet connection and try again.');
-        return;
+        throw new Error('PDF libraries not loaded. Please refresh and try again.');
       }
 
       const element = document.getElementById(elementId);
-      if (!element) return;
+      if (!element) {
+        throw new Error('Document element not found');
+      }
 
+      // Generate canvas from HTML element
       const canvas = await html2canvas(element, {
         scale: 2,
         backgroundColor: '#ffffff',
         useCORS: true,
+        allowTaint: true,
         logging: false,
+        imageTimeout: 15000,
         onclone: (clonedDoc: Document) => {
           const el = clonedDoc.getElementById(elementId);
           if (!el) return;
@@ -146,30 +176,40 @@ const BillingView: React.FC<BillingViewProps> = ({
         }
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = 210;
       const pageHeight = 297;
-      const padding = 5;
-      const contentWidth = pageWidth - (padding * 2);
+      const margin = 5;
+      const contentWidth = pageWidth - (margin * 2);
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
 
-      let y = padding;
-      pdf.addImage(imgData, 'PNG', padding, y, contentWidth, imgHeight);
+      // Single page
+      if (imgHeight <= pageHeight - (margin * 2)) {
+        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
+      } else {
+        // Multi-page handling
+        let heightLeft = imgHeight;
+        let position = 0;
 
-      // Handle multi-page
-      let remainingHeight = imgHeight - (pageHeight - padding * 2);
-      while (remainingHeight > 0) {
-        pdf.addPage();
-        y = -(pageHeight - padding * 2) + padding - remainingHeight + imgHeight;
-        pdf.addImage(imgData, 'PNG', padding, -(imgHeight - remainingHeight - padding + (pageHeight - padding * 2)), contentWidth, imgHeight);
-        remainingHeight -= (pageHeight - padding * 2);
+        // First page
+        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
+        heightLeft -= (pageHeight - margin * 2);
+        position = -(pageHeight - margin * 2);
+
+        // Additional pages
+        while (heightLeft > 0) {
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgHeight);
+          heightLeft -= (pageHeight - margin * 2);
+          position -= (pageHeight - margin * 2);
+        }
       }
 
       pdf.save(filename);
-    } catch (err) {
+    } catch (err: any) {
       console.error('PDF generation error:', err);
-      alert('Error generating PDF. Please try again.');
+      alert(err.message || 'Error generating PDF. Please refresh the page and try again.');
     } finally {
       setIsDownloading(false);
     }
