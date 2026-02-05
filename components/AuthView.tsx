@@ -5,9 +5,11 @@ import { signIn, signUp, signInWithGoogle } from '../services/database';
 
 interface AuthViewProps {
   onAuthSuccess: () => void;
+  onShowPrivacy?: () => void;
+  onShowTerms?: () => void;
 }
 
-const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
+const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onShowPrivacy, onShowTerms }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -190,9 +192,17 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           </button>
         </div>
 
-        <p className="text-center text-[10px] font-bold text-slate-400 mt-8">
-          Secured by Supabase &bull; profee.in
-        </p>
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-[10px] font-bold text-slate-400">
+            By signing in, you agree to our{' '}
+            <button onClick={onShowTerms} className="text-indigo-500 hover:underline">Terms of Service</button>
+            {' '}and{' '}
+            <button onClick={onShowPrivacy} className="text-indigo-500 hover:underline">Privacy Policy</button>
+          </p>
+          <p className="text-[10px] font-bold text-slate-400">
+            Secured by Supabase &bull; profee.in
+          </p>
+        </div>
       </div>
     </div>
   );

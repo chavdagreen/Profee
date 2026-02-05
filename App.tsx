@@ -24,6 +24,8 @@ import ProceedingsView from './components/ProceedingsView';
 import BillingView from './components/BillingView';
 import AuthView from './components/AuthView';
 import ProfileSetupView from './components/ProfileSetupView';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import { generateAppLogo } from './services/geminiService';
 import * as db from './services/database';
 import { supabase } from './services/supabase';
@@ -67,6 +69,9 @@ const App: React.FC = () => {
   // Navigation State for deep linking
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
   const [targetProfileTab, setTargetProfileTab] = useState<'details' | 'financials' | 'proceedings'>('details');
+
+  // Legal pages state (for auth screen)
+  const [showLegalPage, setShowLegalPage] = useState<'privacy' | 'terms' | null>(null);
 
   // Data state (loaded from Supabase)
   const [billingSettings, setBillingSettings] = useState<BillingSettings>(DEFAULT_BILLING_SETTINGS);
@@ -296,7 +301,20 @@ const App: React.FC = () => {
 
   // ======= AUTH SCREEN =======
   if (!user) {
-    return <AuthView onAuthSuccess={loadAllData} />;
+    // Show legal pages if requested
+    if (showLegalPage === 'privacy') {
+      return <PrivacyPolicy onBack={() => setShowLegalPage(null)} />;
+    }
+    if (showLegalPage === 'terms') {
+      return <TermsOfService onBack={() => setShowLegalPage(null)} />;
+    }
+    return (
+      <AuthView
+        onAuthSuccess={loadAllData}
+        onShowPrivacy={() => setShowLegalPage('privacy')}
+        onShowTerms={() => setShowLegalPage('terms')}
+      />
+    );
   }
 
   // ======= PROFILE SETUP SCREEN (first-time users) =======
