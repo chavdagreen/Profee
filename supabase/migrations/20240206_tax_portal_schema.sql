@@ -237,7 +237,7 @@ CREATE INDEX IF NOT EXISTS idx_portal_documents_not_analyzed
 
 CREATE INDEX IF NOT EXISTS idx_portal_documents_hearing_date
     ON public.portal_documents(hearing_date)
-    WHERE hearing_date IS NOT NULL AND hearing_date >= CURRENT_DATE;
+    WHERE hearing_date IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_portal_documents_proceeding_type
     ON public.portal_documents(proceeding_type);
@@ -247,7 +247,7 @@ CREATE INDEX IF NOT EXISTS idx_portal_documents_document_type
 
 CREATE INDEX IF NOT EXISTS idx_portal_documents_reply_deadline
     ON public.portal_documents(reply_deadline)
-    WHERE reply_deadline IS NOT NULL AND reply_deadline >= CURRENT_DATE;
+    WHERE reply_deadline IS NOT NULL;
 
 -- Composite index for common query patterns
 CREATE INDEX IF NOT EXISTS idx_portal_documents_client_type_ay
@@ -452,11 +452,11 @@ CREATE INDEX IF NOT EXISTS idx_action_items_assigned_user
 
 CREATE INDEX IF NOT EXISTS idx_action_items_overdue
     ON public.action_items(due_date, status)
-    WHERE status = 'pending' AND due_date < CURRENT_DATE;
+    WHERE status = 'pending';
 
 CREATE INDEX IF NOT EXISTS idx_action_items_upcoming
     ON public.action_items(due_date)
-    WHERE status = 'pending' AND due_date >= CURRENT_DATE AND due_date <= CURRENT_DATE + INTERVAL '7 days';
+    WHERE status = 'pending';
 
 -- Trigger for updated_at
 DROP TRIGGER IF EXISTS update_action_items_updated_at ON public.action_items;
@@ -529,8 +529,7 @@ CREATE INDEX IF NOT EXISTS idx_sync_logs_sync_type
     ON public.sync_logs(sync_type);
 
 CREATE INDEX IF NOT EXISTS idx_sync_logs_recent
-    ON public.sync_logs(started_at DESC)
-    WHERE started_at > NOW() - INTERVAL '7 days';
+    ON public.sync_logs(started_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_sync_logs_failed
     ON public.sync_logs(status, started_at DESC)
@@ -605,7 +604,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_proceeding_summary_unique
 
 CREATE INDEX IF NOT EXISTS idx_proceeding_summary_next_hearing
     ON public.proceeding_summary(next_hearing_date)
-    WHERE next_hearing_date IS NOT NULL AND next_hearing_date >= CURRENT_DATE;
+    WHERE next_hearing_date IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_proceeding_summary_status
     ON public.proceeding_summary(status)
@@ -616,7 +615,7 @@ CREATE INDEX IF NOT EXISTS idx_proceeding_summary_priority
 
 CREATE INDEX IF NOT EXISTS idx_proceeding_summary_deadline
     ON public.proceeding_summary(next_reply_deadline)
-    WHERE next_reply_deadline IS NOT NULL AND next_reply_deadline >= CURRENT_DATE;
+    WHERE next_reply_deadline IS NOT NULL;
 
 COMMENT ON TABLE public.proceeding_summary IS 'Aggregated summary of each proceeding for quick dashboard access';
 COMMENT ON COLUMN public.proceeding_summary.demand_outstanding_inr IS 'Auto-calculated: total_demand - demand_paid';
