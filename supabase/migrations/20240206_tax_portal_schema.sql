@@ -1077,39 +1077,36 @@ CREATE POLICY "Users can insert AI usage logs"
 -- Note: Storage bucket creation via SQL is limited in Supabase
 -- This needs to be done via Supabase Dashboard or Storage API
 -- Below is the equivalent setup code for documentation
-
-/*
+--
 -- Create bucket via Supabase Dashboard or API:
 -- Bucket name: tax-portal-documents
 -- Public: false
 -- File size limit: 50MB
--- Allowed MIME types: application/pdf, image/png, image/jpeg, application/msword,
---                     application/vnd.openxmlformats-officedocument.wordprocessingml.document
-
+-- Allowed MIME types: application/pdf, image/png, image/jpeg, application/msword
+--
 -- Storage RLS policies (apply via Dashboard):
-
+--
 -- Policy 1: Users can read their client files
-CREATE POLICY "Users can read own client files"
-ON storage.objects FOR SELECT
-USING (
-    bucket_id = 'tax-portal-documents' AND
-    public.user_has_client_access((storage.foldername(name))[1]::uuid)
-);
-
+-- CREATE POLICY "Users can read own client files"
+-- ON storage.objects FOR SELECT
+-- USING (
+--     bucket_id = 'tax-portal-documents' AND
+--     public.user_has_client_access((storage.foldername(name))[1]::uuid)
+-- );
+--
 -- Policy 2: Service role can insert files (for sync operations)
-CREATE POLICY "Service can insert files"
-ON storage.objects FOR INSERT
-WITH CHECK (
-    bucket_id = 'tax-portal-documents'
-);
-
+-- CREATE POLICY "Service can insert files"
+-- ON storage.objects FOR INSERT
+-- WITH CHECK (
+--     bucket_id = 'tax-portal-documents'
+-- );
+--
 -- Policy 3: Service role can delete files
-CREATE POLICY "Service can delete files"
-ON storage.objects FOR DELETE
-USING (
-    bucket_id = 'tax-portal-documents'
-);
-*/
+-- CREATE POLICY "Service can delete files"
+-- ON storage.objects FOR DELETE
+-- USING (
+--     bucket_id = 'tax-portal-documents'
+-- );
 
 
 -- ============================================================================
@@ -1210,25 +1207,23 @@ ORDER BY pd.analysis_priority, pd.downloaded_at;
 
 -- Note: These need to be set up via Supabase Dashboard or pg_cron extension
 -- Below is documentation of what jobs should be created
-
-/*
+--
 -- Job 1: Mark overdue actions (run every hour)
-SELECT cron.schedule(
-    'mark-overdue-actions',
-    '0 * * * *',  -- Every hour
-    $$SELECT public.mark_overdue_actions()$$
-);
-
+-- SELECT cron.schedule(
+--     'mark-overdue-actions',
+--     '0 * * * *',
+--     $$SELECT public.mark_overdue_actions()$$
+-- );
+--
 -- Job 2: Refresh dashboard materialized view (every 15 minutes)
-SELECT cron.schedule(
-    'refresh-dashboard',
-    '*/15 * * * *',  -- Every 15 minutes
-    $$SELECT public.refresh_client_dashboard()$$
-);
-
+-- SELECT cron.schedule(
+--     'refresh-dashboard',
+--     '0,15,30,45 * * * *',
+--     $$SELECT public.refresh_client_dashboard()$$
+-- );
+--
 -- Job 3: Nightly sync trigger (at 2 AM IST / 8:30 PM UTC)
 -- This would be an Edge Function that triggers sync for all active clients
-*/
 
 
 -- ============================================================================
@@ -1272,53 +1267,51 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO service_role;
 -- ============================================================================
 -- SETUP INSTRUCTIONS
 -- ============================================================================
-
-/*
-SETUP STEPS:
-
-1. Run this entire SQL script in Supabase SQL Editor
-
-2. Create Storage Bucket:
-   - Go to Storage in Supabase Dashboard
-   - Create bucket: "tax-portal-documents"
-   - Set to Private (not public)
-   - Add allowed MIME types: application/pdf, image/*
-   - Set max file size: 50MB
-
-3. Configure Storage Policies:
-   - Go to Storage > Policies
-   - Add SELECT policy for authenticated users using user_has_client_access()
-   - Service role automatically has full access
-
-4. Set up Scheduled Jobs (optional):
-   - Enable pg_cron extension in Database > Extensions
-   - Or use Supabase Edge Functions with cron triggers
-
-5. Configure Edge Function for Nightly Sync:
-   - Create Edge Function for portal sync
-   - Set up cron trigger for 2 AM IST
-
-6. Add to existing clients table (if not already present):
-   - Ensure clients table has: id (UUID), name, pan, email, user_id columns
-   - user_id should reference auth.users(id)
-
-7. Verify RLS:
-   - Test that authenticated users can only see their own data
-   - Verify service role can access all data
-
-8. Monitor Performance:
-   - Check index usage with: SELECT * FROM pg_stat_user_indexes;
-   - Monitor slow queries in Supabase Dashboard
-
-IMPORTANT NOTES:
-
-- All credentials (portal passwords) should be encrypted BEFORE storage
-- Use application-level AES-256-GCM encryption with unique IV per credential
-- Never log or expose decrypted credentials
-- Consent must be obtained before storing/using credentials
-- Materialized view needs periodic refresh (recommended: every 15 mins)
-- Consider partitioning portal_documents by assessment_year for 10000+ documents
-*/
+--
+-- SETUP STEPS:
+--
+-- 1. Run this entire SQL script in Supabase SQL Editor
+--
+-- 2. Create Storage Bucket:
+--    - Go to Storage in Supabase Dashboard
+--    - Create bucket: "tax-portal-documents"
+--    - Set to Private (not public)
+--    - Add allowed MIME types: application/pdf, image/png, image/jpeg
+--    - Set max file size: 50MB
+--
+-- 3. Configure Storage Policies:
+--    - Go to Storage > Policies
+--    - Add SELECT policy for authenticated users using user_has_client_access()
+--    - Service role automatically has full access
+--
+-- 4. Set up Scheduled Jobs (optional):
+--    - Enable pg_cron extension in Database > Extensions
+--    - Or use Supabase Edge Functions with cron triggers
+--
+-- 5. Configure Edge Function for Nightly Sync:
+--    - Create Edge Function for portal sync
+--    - Set up cron trigger for 2 AM IST
+--
+-- 6. Add to existing clients table (if not already present):
+--    - Ensure clients table has: id (UUID), name, pan, email, user_id columns
+--    - user_id should reference auth.users(id)
+--
+-- 7. Verify RLS:
+--    - Test that authenticated users can only see their own data
+--    - Verify service role can access all data
+--
+-- 8. Monitor Performance:
+--    - Check index usage with: SELECT FROM pg_stat_user_indexes;
+--    - Monitor slow queries in Supabase Dashboard
+--
+-- IMPORTANT NOTES:
+--
+-- - All credentials (portal passwords) should be encrypted BEFORE storage
+-- - Use application-level AES-256-GCM encryption with unique IV per credential
+-- - Never log or expose decrypted credentials
+-- - Consent must be obtained before storing/using credentials
+-- - Materialized view needs periodic refresh (recommended: every 15 mins)
+-- - Consider partitioning portal_documents by assessment_year for 10000+ documents
 
 
 -- ============================================================================
