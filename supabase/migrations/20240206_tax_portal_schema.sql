@@ -1125,7 +1125,7 @@ SELECT
     ps.office_address,
     ai.title AS related_action,
     ai.status AS action_status,
-    EXTRACT(DAY FROM ps.next_hearing_date - CURRENT_DATE) AS days_until_hearing
+    (ps.next_hearing_date - CURRENT_DATE) AS days_until_hearing
 FROM public.proceeding_summary ps
 JOIN public.clients c ON c.id = ps.client_id
 LEFT JOIN public.action_items ai ON ai.client_id = ps.client_id
@@ -1146,7 +1146,7 @@ SELECT
     pd.document_name,
     pd.reply_deadline,
     pd.din_number,
-    EXTRACT(DAY FROM pd.reply_deadline - CURRENT_DATE) AS days_remaining,
+    (pd.reply_deadline - CURRENT_DATE) AS days_remaining,
     CASE
         WHEN pd.reply_deadline < CURRENT_DATE THEN 'overdue'
         WHEN pd.reply_deadline <= CURRENT_DATE + INTERVAL '3 days' THEN 'critical'
