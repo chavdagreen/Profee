@@ -672,9 +672,9 @@ CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_date
 CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_operation
     ON public.ai_usage_logs(operation_type);
 
--- For monthly cost reports
+-- For monthly cost reports (use created_at directly, filter in queries)
 CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_monthly
-    ON public.ai_usage_logs(date_trunc('month', created_at), client_id);
+    ON public.ai_usage_logs(created_at, client_id);
 
 COMMENT ON TABLE public.ai_usage_logs IS 'Tracks all AI API calls for cost monitoring and optimization';
 COMMENT ON COLUMN public.ai_usage_logs.tokens_total IS 'Auto-calculated: tokens_input + tokens_output';
