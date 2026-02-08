@@ -9,42 +9,61 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   return (
     <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0f172a]">
-      {/* Header */}
-      <header className="p-6 md:p-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg">
-              <Gavel className="w-6 h-6" />
-            </div>
-            <span className="text-2xl font-black text-indigo-600 tracking-tighter">Profee</span>
-          </div>
-          <button
-            onClick={onGetStarted}
-            className="clay-button px-6 py-3 font-bold text-sm flex items-center gap-2"
-          >
-            Sign In <ArrowRight size={16} />
-          </button>
-        </div>
-      </header>
+      {/* Hero Section with GIF Background */}
+      <section className="relative overflow-hidden">
+        {/* GIF Background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url('https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Profee.in%20(Video).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Qcm9mZWUuaW4gKFZpZGVvKS5naWYiLCJpYXQiOjE3NzA1MzE0NzksImV4cCI6MjA4NTg5MTQ3OX0.qHSA_myEdDpZnze8zFGfpDyhS7lQzM43dgRPxyZ_vSY')`,
+          }}
+        />
+        {/* Dark gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
 
-      {/* Hero Section */}
-      <section className="px-6 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-white tracking-tight leading-tight">
-            Tax Practice Management
-            <span className="text-indigo-600"> Made Simple</span>
-          </h1>
-          <p className="mt-6 text-lg md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-            Profee is an AI-powered practice management suite designed for Indian tax professionals.
-            Manage clients, track hearings, generate invoices, and sync with Google Calendar.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+        {/* Header - overlaid on GIF */}
+        <header className="relative z-10 p-6 md:p-8">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/15 backdrop-blur-sm p-2.5 rounded-2xl text-white shadow-lg border border-white/20">
+                <Gavel className="w-6 h-6" />
+              </div>
+              <span className="text-2xl font-black text-white tracking-tighter drop-shadow-lg">Profee</span>
+            </div>
             <button
               onClick={onGetStarted}
-              className="clay-button px-8 py-4 font-black text-lg flex items-center justify-center gap-3"
+              className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/30 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all"
             >
-              Get Started Free <ArrowRight size={20} />
+              Sign In <ArrowRight size={16} />
             </button>
+          </div>
+        </header>
+
+        {/* Hero Content */}
+        <div className="relative z-10 px-6 py-20 md:py-32">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+              Tax Practice Management
+              <span className="text-indigo-400"> Made Simple</span>
+            </h1>
+            <p className="mt-6 text-lg md:text-xl text-slate-200 max-w-2xl mx-auto drop-shadow">
+              Profee is an AI-powered practice management suite designed for Indian tax professionals.
+              Manage clients, track hearings, generate invoices, and sync with Google Calendar.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={onGetStarted}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl transition-all hover:scale-105"
+              >
+                Get Started Free <ArrowRight size={20} />
+              </button>
+              <button
+                onClick={onGetStarted}
+                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/30 px-8 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all hover:scale-105"
+              >
+                Sign In
+              </button>
+            </div>
           </div>
         </div>
       </section>
