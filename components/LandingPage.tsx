@@ -9,14 +9,22 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   return (
     <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0f172a]">
-      {/* Header - on clean background above the GIF */}
-      <header className="bg-[#F0F4F8] dark:bg-[#0f172a] px-6 py-4 md:px-8 md:py-5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      {/* Hero Section with GIF Background */}
+      <section className="relative overflow-hidden min-h-[550px] md:min-h-[650px]">
+        {/* GIF Background - no overlay, original view */}
+        <img
+          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(2).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDIpLmdpZiIsImlhdCI6MTc3MDU1NzE3NiwiZXhwIjoyNDAxMjc3MTc2fQ.jaBxUbNXPVIl7FycN29yMaX3vz8rMj-DDU-WZ7d7VYM"
+          alt="Profee.in - Tax Practice Management"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {/* Branding & Sign In - floating over GIF, no bar/background */}
+        <div className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-5 md:pt-6">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg">
               <Gavel className="w-6 h-6" />
             </div>
-            <span className="text-2xl font-black text-indigo-600 tracking-tighter">Profee.in</span>
+            <span className="text-2xl font-black text-indigo-600 tracking-tighter drop-shadow-sm">Profee.in</span>
           </div>
           <button
             onClick={onGetStarted}
@@ -25,19 +33,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             Sign In <ArrowRight size={16} />
           </button>
         </div>
-      </header>
-
-      {/* Hero Section with GIF Background */}
-      <section className="relative overflow-hidden min-h-[500px] md:min-h-[600px]">
-        {/* GIF Background - no overlay, original view */}
-        <img
-          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(2).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDIpLmdpZiIsImlhdCI6MTc3MDU1NzE3NiwiZXhwIjoyNDAxMjc3MTc2fQ.jaBxUbNXPVIl7FycN29yMaX3vz8rMj-DDU-WZ7d7VYM"
-          alt="Profee.in - Tax Practice Management"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
 
         {/* Hero Content - positioned at lower left over white space */}
-        <div className="relative z-10 flex items-end min-h-[500px] md:min-h-[600px]">
+        <div className="relative z-10 flex items-end min-h-[440px] md:min-h-[540px]">
           <div className="px-6 md:px-12 pb-12 md:pb-16 max-w-xl">
             <h1 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight leading-tight">
               Tax Practice Management
