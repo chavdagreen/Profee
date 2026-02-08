@@ -13,26 +13,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
         {/* GIF Background - no overlay, original view */}
         <img
-          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(1).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDEpLmdpZiIsImlhdCI6MTc3MDU1NjcyNywiZXhwIjoyMDg1OTE2NzI3fQ.nGIuE-WsU8nUdEeWFpAYexCWPs3X0XwN0eGKL3YSl9U"
-          alt="Profee - Tax Practice Management"
+          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(2).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDIpLmdpZiIsImlhdCI6MTc3MDU1NzE3NiwiZXhwIjoyNDAxMjc3MTc2fQ.jaBxUbNXPVIl7FycN29yMaX3vz8rMj-DDU-WZ7d7VYM"
+          alt="Profee.in - Tax Practice Management"
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Header - overlaid on GIF */}
-        <header className="relative z-10 p-6 md:p-8">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg">
-                <Gavel className="w-6 h-6" />
+        {/* Header - overlaid on GIF with dark pill for visibility */}
+        <header className="relative z-10 p-4 md:p-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-black/80 backdrop-blur-md rounded-2xl px-6 py-3 flex items-center justify-between shadow-2xl">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-500 p-2 rounded-xl text-white">
+                  <Gavel className="w-5 h-5" />
+                </div>
+                <span className="text-xl font-black text-white tracking-tighter">Profee.in</span>
               </div>
-              <span className="text-2xl font-black text-indigo-600 tracking-tighter">Profee</span>
+              <button
+                onClick={onGetStarted}
+                className="bg-white hover:bg-slate-100 text-black px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all"
+              >
+                Sign In <ArrowRight size={16} />
+              </button>
             </div>
-            <button
-              onClick={onGetStarted}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg"
-            >
-              Sign In <ArrowRight size={16} />
-            </button>
           </div>
         </header>
 
@@ -112,13 +114,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             Ready to Streamline Your Practice?
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mb-8">
-            Join tax professionals who trust Profee to manage their practice efficiently.
+            Join tax professionals who trust Profee.in to manage their practice efficiently.
           </p>
           <button
             onClick={onGetStarted}
             className="clay-button px-8 py-4 font-black text-lg"
           >
-            Start Using Profee
+            Start Using Profee.in
           </button>
         </div>
       </section>
@@ -130,14 +132,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <div className="bg-indigo-600 p-2 rounded-xl text-white">
               <Gavel className="w-5 h-5" />
             </div>
-            <span className="font-black text-indigo-600">Profee</span>
+            <span className="font-black text-indigo-600">Profee.in</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-slate-500">
             <a href="/privacy" className="hover:text-indigo-600 hover:underline">Privacy Policy</a>
             <a href="/terms" className="hover:text-indigo-600 hover:underline">Terms of Service</a>
           </div>
           <p className="text-sm text-slate-400">
-            &copy; 2026 Profee. All rights reserved.
+            &copy; 2026 Profee.in. All rights reserved.
           </p>
         </div>
       </footer>

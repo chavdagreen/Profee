@@ -57,7 +57,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onShowPrivacy, onSho
               <Gavel className="w-10 h-10" />
             </div>
           </div>
-          <h1 className="text-5xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">Profee</h1>
+          <h1 className="text-5xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">Profee.in</h1>
           <p className="text-[10px] font-bold text-slate-400 tracking-wide mt-2">AI Tax Professional Suite</p>
         </div>
 

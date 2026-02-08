@@ -50,7 +50,7 @@ const ProfileSetupView: React.FC<ProfileSetupViewProps> = ({ settings, onComplet
           <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-xl inline-block mb-4">
             <Sparkles className="w-10 h-10" />
           </div>
-          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter mb-2">Welcome to Profee</h1>
+          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter mb-2">Welcome to Profee.in</h1>
           <p className="text-slate-400 font-bold text-sm">Let's set up your practice profile. This information will appear on your invoices and receipts.</p>
         </div>
 
