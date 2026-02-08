@@ -141,6 +141,15 @@ const BillingView: React.FC<BillingViewProps> = ({
         }
       }
 
+      // Add Profee.in watermark on every page
+      const totalPages = pdf.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(9);
+        pdf.setTextColor(160, 160, 160);
+        pdf.text('Profee.in', margin + 1, pageHeight - 4);
+      }
+
       pdf.save(filename);
     } catch (err: any) {
       console.error('PDF generation error:', err);

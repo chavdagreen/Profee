@@ -308,7 +308,7 @@ const App: React.FC = () => {
           <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-xl inline-block mb-4">
             <Gavel className="w-10 h-10 animate-pulse" />
           </div>
-          <h1 className="text-3xl font-black text-indigo-600 tracking-tighter">Profee</h1>
+          <h1 className="text-3xl font-black text-indigo-600 tracking-tighter">Profee.in</h1>
           <p className="text-[10px] font-black text-slate-400 tracking-wide mt-2">Loading...</p>
         </div>
       </div>
@@ -368,7 +368,7 @@ const App: React.FC = () => {
           <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-xl inline-block mb-4">
             <RefreshCw className="w-10 h-10 animate-spin" />
           </div>
-          <h1 className="text-3xl font-black text-indigo-600 tracking-tighter">Profee</h1>
+          <h1 className="text-3xl font-black text-indigo-600 tracking-tighter">Profee.in</h1>
           <p className="text-[10px] font-black text-slate-400 tracking-wide mt-2">Loading your practice data...</p>
         </div>
       </div>
@@ -407,14 +407,14 @@ const App: React.FC = () => {
       <aside className="hidden md:flex flex-col w-80 bg-[#f8fafc] dark:bg-[#1e293b] p-8 shadow-2xl z-20 border-r border-white dark:border-slate-800 transition-colors">
         <div className="flex items-center gap-4 mb-12 px-2 group">
           <div className="relative cursor-pointer transition-all duration-500 hover:rotate-12" onClick={handleGenerateLogo}>
-            {appLogo ? <img src={appLogo} alt="Profee" className="w-12 h-12 rounded-2xl object-cover shadow-lg" /> :
+            {appLogo ? <img src={appLogo} alt="Profee.in" className="w-12 h-12 rounded-2xl object-cover shadow-lg" /> :
               <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-xl">
                 {isGeneratingLogo ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Gavel className="w-6 h-6" />}
               </div>
             }
           </div>
           <div>
-            <h1 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">Profee</h1>
+            <h1 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">Profee.in</h1>
             <p className="text-[9px] font-black text-slate-400 tracking-wide leading-none">AI Tax Professional</p>
           </div>
         </div>
@@ -452,7 +452,7 @@ const App: React.FC = () => {
       <div className="md:hidden flex items-center justify-between p-6 bg-white dark:bg-[#1e293b] shadow-xl sticky top-0 z-30 border-b dark:border-slate-800">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-600 p-2 rounded-xl text-white"><Gavel size={18}/></div>
-          <span className="font-black text-xl tracking-tighter text-indigo-600">Profee</span>
+          <span className="font-black text-xl tracking-tighter text-indigo-600">Profee.in</span>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-rose-500"><LogOut size={20}/></button>
@@ -497,7 +497,7 @@ const App: React.FC = () => {
             <span className="mx-2">&bull;</span>
             <button onClick={() => navigateTo('terms')} className="hover:text-indigo-500 hover:underline">Terms of Service</button>
             <span className="mx-2">&bull;</span>
-            <span>&copy; 2026 Profee. All rights reserved.</span>
+            <span>&copy; 2026 Profee.in. All rights reserved.</span>
           </p>
         </footer>
       </main>
