@@ -13,7 +13,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
         {/* GIF Background - no overlay, original view */}
         <img
-          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Profee.in%20(Video).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Qcm9mZWUuaW4gKFZpZGVvKS5naWYiLCJpYXQiOjE3NzA1MzE0NzksImV4cCI6MjA4NTg5MTQ3OX0.qHSA_myEdDpZnze8zFGfpDyhS7lQzM43dgRPxyZ_vSY"
+          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(1).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDEpLmdpZiIsImlhdCI6MTc3MDU1NjcyNywiZXhwIjoyMDg1OTE2NzI3fQ.nGIuE-WsU8nUdEeWFpAYexCWPs3X0XwN0eGKL3YSl9U"
           alt="Profee - Tax Practice Management"
           className="absolute inset-0 w-full h-full object-cover"
         />
