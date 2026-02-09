@@ -55,13 +55,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
           </div>
 
-          {/* Right - 1:1 GIF */}
+          {/* Right - 1:1 Video */}
           <div className="flex-1 order-1 md:order-2 flex justify-center md:justify-end">
-            <img
-              src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(800%20x%20800%20px).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDgwMCB4IDgwMCBweCkuZ2lmIiwiaWF0IjoxNzcwNjE1MTgwLCJleHAiOjMzNDc0MTUxODB9.kMRDiIacyXD41Wx-Gef4e48pRnXjbNKFYggwWx-z9js"
-              alt="Profee.in - Tax Practice Management"
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
               className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[550px] h-auto rounded-3xl"
-            />
+            >
+              <source
+                src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(1440%20x%201440%20px)%20(1).mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDE0NDAgeCAxNDQwIHB4KSAoMSkubXA0IiwiaWF0IjoxNzcwNjE2NjcwLCJleHAiOjMzNDc0MTY2NzB9.hO_tGLsIInCQ3OZC5sPszMx2ChRamOukU32X0LCy4qM"
+                type="video/mp4"
+              />
+            </video>
           </div>
         </div>
       </section>
