@@ -8,23 +8,15 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   return (
-    <div className="min-h-screen bg-[#F0F4F8] dark:bg-[#0f172a]">
-      {/* Hero Section with GIF Background */}
-      <section className="relative overflow-hidden min-h-[550px] md:min-h-[650px]">
-        {/* GIF Background - no overlay, original view */}
-        <img
-          src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(2).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDIpLmdpZiIsImlhdCI6MTc3MDU1NzE3NiwiZXhwIjoyNDAxMjc3MTc2fQ.jaBxUbNXPVIl7FycN29yMaX3vz8rMj-DDU-WZ7d7VYM"
-          alt="Profee.in - Tax Practice Management"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-
-        {/* Branding & Sign In - floating over GIF, no bar/background */}
-        <div className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-5 md:pt-6">
+    <div className="min-h-screen bg-white dark:bg-[#0f172a]">
+      {/* Header */}
+      <header className="px-6 md:px-10 pt-5 md:pt-6 pb-2 bg-white dark:bg-[#0f172a]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg">
               <Gavel className="w-6 h-6" />
             </div>
-            <span className="text-2xl font-black text-indigo-600 tracking-tighter drop-shadow-sm">Profee.in</span>
+            <span className="text-2xl font-black text-indigo-600 tracking-tighter">Profee.in</span>
           </div>
           <button
             onClick={onGetStarted}
@@ -33,15 +25,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             Sign In <ArrowRight size={16} />
           </button>
         </div>
+      </header>
 
-        {/* Hero Content - positioned at lower left over white space */}
-        <div className="relative z-10 flex items-end min-h-[440px] md:min-h-[540px]">
-          <div className="px-6 md:px-12 pb-12 md:pb-16 max-w-xl">
-            <h1 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight leading-tight">
+      {/* Hero Section - split layout: text left, GIF right */}
+      <section className="bg-white dark:bg-[#0f172a]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center px-6 md:px-10 py-8 md:py-12 gap-8 md:gap-12">
+          {/* Left - Text & CTA */}
+          <div className="flex-1 order-2 md:order-1">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-800 dark:text-white tracking-tight leading-tight">
               Tax Practice Management
               <span className="text-indigo-600"> Made Simple</span>
             </h1>
-            <p className="mt-4 text-base md:text-lg text-slate-600 max-w-md">
+            <p className="mt-5 text-base md:text-lg text-slate-500 dark:text-slate-400 max-w-md">
               AI-powered practice management suite designed for Indian tax professionals. Manage clients, track hearings, and generate invoices.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -53,17 +48,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </button>
               <button
                 onClick={onGetStarted}
-                className="bg-white hover:bg-slate-50 text-indigo-600 border-2 border-indigo-600 px-7 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:scale-105"
+                className="bg-white hover:bg-slate-50 text-indigo-600 border-2 border-indigo-600 px-7 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:scale-105 dark:bg-transparent dark:hover:bg-indigo-950/30"
               >
                 Sign In
               </button>
             </div>
           </div>
+
+          {/* Right - 1:1 GIF */}
+          <div className="flex-1 order-1 md:order-2 flex justify-center md:justify-end">
+            <img
+              src="https://llazlwfqjxekpaykcbox.supabase.co/storage/v1/object/sign/tax-portal-documents/Assets/Profee.in%20(Video)%20(800%20x%20800%20px).gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jNTg1ZGNiMi1lMGNlLTQ4ZmEtOTQ3NS1jZTQxMGIyNTNmMDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0YXgtcG9ydGFsLWRvY3VtZW50cy9Bc3NldHMvUHJvZmVlLmluIChWaWRlbykgKDgwMCB4IDgwMCBweCkuZ2lmIiwiaWF0IjoxNzcwNjE1MTgwLCJleHAiOjMzNDc0MTUxODB9.kMRDiIacyXD41Wx-Gef4e48pRnXjbNKFYggwWx-z9js"
+              alt="Profee.in - Tax Practice Management"
+              className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[550px] h-auto rounded-3xl"
+            />
+          </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="px-6 py-16 bg-white dark:bg-slate-800/50">
+      <section className="px-6 py-16 bg-[#F0F4F8] dark:bg-slate-800/50">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-black text-center text-slate-800 dark:text-white mb-12">
             Everything You Need to Run Your Practice
