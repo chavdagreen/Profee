@@ -164,6 +164,16 @@ export async function signIn(email: string, password: string) {
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  if (credential?.accessToken) {
+    localStorage.setItem('google_access_token', credential.accessToken);
+  }
+  return result.user;
+}
+
+export async function connectGoogleCalendar() {
+  const provider = new GoogleAuthProvider();
   provider.addScope('https://www.googleapis.com/auth/calendar.events');
   provider.setCustomParameters({ access_type: 'offline', prompt: 'consent' });
   const result = await signInWithPopup(auth, provider);
@@ -171,7 +181,7 @@ export async function signInWithGoogle() {
   if (credential?.accessToken) {
     localStorage.setItem('google_access_token', credential.accessToken);
   }
-  return result.user;
+  return !!credential?.accessToken;
 }
 
 export async function getGoogleAccessToken(): Promise<string | null> {
