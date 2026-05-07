@@ -31,7 +31,8 @@ import TermsOfService from './components/TermsOfService';
 import LandingPage from './components/LandingPage';
 import { generateAppLogo } from './services/geminiService';
 import * as db from './services/database';
-import { supabase } from './services/supabase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './services/firebase';
 
 const DEFAULT_BILLING_SETTINGS: BillingSettings = {
   practiceName: 'My Practice',
@@ -96,20 +97,15 @@ const App: React.FC = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   // Check if user logged in with Google (for calendar sync status)
-  const isGoogleConnected = user?.app_metadata?.provider === 'google' || user?.identities?.some((id: any) => id.provider === 'google');
+  const isGoogleConnected = user?.providerData?.some((p: any) => p.providerId === 'google.com');
 
   // ======= AUTH LISTENER =======
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setAuthLoading(false);
     });
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-      setAuthLoading(false);
-    });
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   // ======= LOAD DATA FROM SUPABASE =======

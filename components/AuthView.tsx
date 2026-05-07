@@ -200,7 +200,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, onShowPrivacy, onSho
             <a href="/privacy" className="text-indigo-500 hover:underline">Privacy Policy</a>
           </p>
           <p className="text-[10px] font-bold text-slate-400">
-            Secured by Supabase &bull; profee.in
+            Secured by Firebase &bull; profee.in
           </p>
         </div>
       </div>

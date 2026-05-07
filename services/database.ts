@@ -1,102 +1,138 @@
-import { supabase } from './supabase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile,
+} from 'firebase/auth';
+import {
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  getDoc,
+  query,
+  orderBy,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { auth, firestore } from './firebase';
 import { Client, Hearing, Invoice, Receipt, BillingSettings, InvoiceItem } from '../types';
 
 // ============================================================
-// HELPER: Convert database row -> frontend type
+// HELPERS
 // ============================================================
 
-function toClient(row: any): Client {
+function userCol(uid: string, col: string) {
+  return collection(firestore, 'users', uid, col);
+}
+
+function userDoc(uid: string, col: string, id: string) {
+  return doc(firestore, 'users', uid, col, id);
+}
+
+function getCurrentUid(): string {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  return user.uid;
+}
+
+function toClient(id: string, data: any): Client {
   return {
-    id: row.id,
-    name: row.name,
-    pan: row.pan,
-    group: row.group_name,
-    entityType: row.entity_type,
-    contact: row.contact,
-    email: row.email || undefined,
-    address: row.address || undefined,
-    portalPassword: row.portal_password || undefined,
-    gstin: row.gstin || undefined,
+    id,
+    name: data.name,
+    pan: data.pan,
+    group: data.group_name,
+    entityType: data.entity_type,
+    contact: data.contact,
+    email: data.email || undefined,
+    address: data.address || undefined,
+    portalPassword: data.portal_password || undefined,
+    gstin: data.gstin || undefined,
   };
 }
 
-function toHearing(row: any): Hearing {
+function toHearing(id: string, data: any): Hearing {
   return {
-    id: row.id,
-    clientId: row.client_id,
-    clientName: row.client_name,
-    caseType: row.case_type,
-    issueDate: row.issue_date || undefined,
-    hearingDate: row.hearing_date,
-    time: row.time,
-    forum: row.forum,
-    status: row.status,
-    assessmentYear: row.assessment_year,
-    description: row.description || undefined,
-    isCritical: row.is_critical || false,
-    quotedFees: row.quoted_fees ? Number(row.quoted_fees) : undefined,
+    id,
+    clientId: data.client_id,
+    clientName: data.client_name,
+    caseType: data.case_type,
+    issueDate: data.issue_date || undefined,
+    hearingDate: data.hearing_date,
+    time: data.time,
+    forum: data.forum,
+    status: data.status,
+    assessmentYear: data.assessment_year,
+    description: data.description || undefined,
+    isCritical: data.is_critical || false,
+    quotedFees: data.quoted_fees ? Number(data.quoted_fees) : undefined,
   };
 }
 
-function toInvoice(row: any): Invoice {
+function toInvoice(id: string, data: any): Invoice {
   return {
-    id: row.id,
-    invoiceNumber: row.invoice_number,
-    clientId: row.client_id,
-    clientName: row.client_name,
-    clientAddress: row.client_address || undefined,
-    clientGstin: row.client_gstin || undefined,
-    clientPan: row.client_pan || undefined,
-    date: row.date,
-    dueDate: row.due_date,
-    placeOfSupply: row.place_of_supply,
-    countryOfSupply: row.country_of_supply,
-    items: (row.items || []) as InvoiceItem[],
-    subTotal: Number(row.sub_total),
-    discountPercent: Number(row.discount_percent),
-    discountAmount: Number(row.discount_amount),
-    taxableAmount: Number(row.taxable_amount),
-    gstTotal: Number(row.gst_total),
-    cgstTotal: Number(row.cgst_total),
-    sgstTotal: Number(row.sgst_total),
-    total: Number(row.total),
-    status: row.status,
-    themeColor: row.theme_color,
-    assessmentYear: row.assessment_year || undefined,
-    caseType: row.case_type || undefined,
-    notes: row.notes || undefined,
+    id,
+    invoiceNumber: data.invoice_number,
+    clientId: data.client_id,
+    clientName: data.client_name,
+    clientAddress: data.client_address || undefined,
+    clientGstin: data.client_gstin || undefined,
+    clientPan: data.client_pan || undefined,
+    date: data.date,
+    dueDate: data.due_date,
+    placeOfSupply: data.place_of_supply,
+    countryOfSupply: data.country_of_supply,
+    items: (data.items || []) as InvoiceItem[],
+    subTotal: Number(data.sub_total),
+    discountPercent: Number(data.discount_percent),
+    discountAmount: Number(data.discount_amount),
+    taxableAmount: Number(data.taxable_amount),
+    gstTotal: Number(data.gst_total),
+    cgstTotal: Number(data.cgst_total),
+    sgstTotal: Number(data.sgst_total),
+    total: Number(data.total),
+    status: data.status,
+    themeColor: data.theme_color,
+    assessmentYear: data.assessment_year || undefined,
+    caseType: data.case_type || undefined,
+    notes: data.notes || undefined,
   };
 }
 
-function toReceipt(row: any): Receipt {
+function toReceipt(id: string, data: any): Receipt {
   return {
-    id: row.id,
-    receiptNumber: row.receipt_number,
-    clientId: row.client_id || undefined,
-    groupId: row.group_id || undefined,
-    clientName: row.client_name,
-    date: row.date,
-    amount: Number(row.amount),
-    settlementDiscount: row.settlement_discount ? Number(row.settlement_discount) : undefined,
-    paymentMethod: row.payment_method,
-    reference: row.reference || undefined,
-    invoiceIds: row.invoice_ids || undefined,
-    notes: row.notes || undefined,
+    id,
+    receiptNumber: data.receipt_number,
+    clientId: data.client_id || undefined,
+    groupId: data.group_id || undefined,
+    clientName: data.client_name,
+    date: data.date,
+    amount: Number(data.amount),
+    settlementDiscount: data.settlement_discount ? Number(data.settlement_discount) : undefined,
+    paymentMethod: data.payment_method,
+    reference: data.reference || undefined,
+    invoiceIds: data.invoice_ids || undefined,
+    notes: data.notes || undefined,
   };
 }
 
-function toBillingSettings(row: any): BillingSettings {
-  const bank = row.bank_details || {};
+function toBillingSettings(data: any): BillingSettings {
+  const bank = data.bank_details || {};
   return {
-    practiceName: row.practice_name,
-    address: row.address,
-    pan: row.pan,
-    gstin: row.gstin,
-    themeColor: row.theme_color,
-    prefix: row.prefix,
-    isGstApplicable: row.is_gst_applicable,
-    isAutoNumbering: row.is_auto_numbering,
-    lastNumber: row.last_number,
+    practiceName: data.practice_name,
+    address: data.address,
+    pan: data.pan,
+    gstin: data.gstin,
+    themeColor: data.theme_color,
+    prefix: data.prefix,
+    isGstApplicable: data.is_gst_applicable,
+    isAutoNumbering: data.is_auto_numbering,
+    lastNumber: data.last_number,
     bankDetails: {
       accountHolder: bank.accountHolder || '',
       accountNumber: bank.accountNumber || '',
@@ -105,9 +141,9 @@ function toBillingSettings(row: any): BillingSettings {
       bankName: bank.bankName || '',
       upiId: bank.upiId || '',
     },
-    terms: row.terms || [],
-    defaultNotes: row.default_notes || '',
-    notes: row.notes || '',
+    terms: data.terms || [],
+    defaultNotes: data.default_notes || '',
+    notes: data.notes || '',
   };
 }
 
@@ -116,45 +152,58 @@ function toBillingSettings(row: any): BillingSettings {
 // ============================================================
 
 export async function signUp(email: string, password: string, fullName: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
-  });
-  if (error) throw error;
-  return data;
+  const { user } = await createUserWithEmailAndPassword(auth, email, password);
+  await updateProfile(user, { displayName: fullName });
+  return user;
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data;
+  const { user } = await signInWithEmailAndPassword(auth, email, password);
+  return user;
 }
 
 export async function signInWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin,
-      scopes: 'https://www.googleapis.com/auth/calendar.events',
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    },
-  });
-  if (error) throw error;
-  return data;
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  if (credential?.accessToken) {
+    localStorage.setItem('google_access_token', credential.accessToken);
+  }
+  return result.user;
+}
+
+export async function connectGoogleCalendar() {
+  const provider = new GoogleAuthProvider();
+  provider.addScope('https://www.googleapis.com/auth/calendar.events');
+  provider.setCustomParameters({ access_type: 'offline', prompt: 'consent' });
+  const result = await signInWithPopup(auth, provider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  if (credential?.accessToken) {
+    localStorage.setItem('google_access_token', credential.accessToken);
+  }
+  return !!credential?.accessToken;
+}
+
+export async function getGoogleAccessToken(): Promise<string | null> {
+  return localStorage.getItem('google_access_token');
+}
+
+export async function signOut() {
+  localStorage.removeItem('google_access_token');
+  await firebaseSignOut(auth);
+}
+
+export function onAuthStateChange(callback: (user: any) => void) {
+  return onAuthStateChanged(auth, callback);
+}
+
+export async function getSession() {
+  return auth.currentUser;
 }
 
 // ============================================================
 // GOOGLE CALENDAR SYNC
 // ============================================================
-
-export async function getGoogleAccessToken(): Promise<string | null> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.provider_token || null;
-}
 
 export async function syncHearingToGoogleCalendar(hearing: Hearing): Promise<boolean> {
   const token = await getGoogleAccessToken();
@@ -169,14 +218,8 @@ export async function syncHearingToGoogleCalendar(hearing: Hearing): Promise<boo
   const event = {
     summary: `${hearing.forum} Hearing - ${hearing.clientName}`,
     description: `Case: ${hearing.caseType}\nAY: ${hearing.assessmentYear}\nStatus: ${hearing.status}${hearing.description ? '\n\n' + hearing.description : ''}`,
-    start: {
-      dateTime: startDateTime,
-      timeZone: 'Asia/Kolkata',
-    },
-    end: {
-      dateTime: endDateTime,
-      timeZone: 'Asia/Kolkata',
-    },
+    start: { dateTime: startDateTime, timeZone: 'Asia/Kolkata' },
+    end: { dateTime: endDateTime, timeZone: 'Asia/Kolkata' },
     reminders: {
       useDefault: false,
       overrides: [
@@ -212,37 +255,19 @@ export async function syncAllHearingsToGoogleCalendar(hearings: Hearing[]): Prom
   return synced;
 }
 
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-}
-
-export function onAuthStateChange(callback: (user: any) => void) {
-  return supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user || null);
-  });
-}
-
-export async function getSession() {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
-}
-
 // ============================================================
 // GROUPS
 // ============================================================
 
 export async function fetchGroups(): Promise<string[]> {
-  const { data, error } = await supabase.from('groups').select('name').order('name');
-  if (error) throw error;
-  return (data || []).map((g: any) => g.name);
+  const uid = getCurrentUid();
+  const snap = await getDocs(query(userCol(uid, 'groups'), orderBy('name')));
+  return snap.docs.map(d => d.data().name as string);
 }
 
 export async function addGroup(name: string) {
-  const session = await getSession();
-  if (!session) throw new Error('Not authenticated');
-  const { error } = await supabase.from('groups').insert({ user_id: session.user.id, name });
-  if (error) throw error;
+  const uid = getCurrentUid();
+  await addDoc(userCol(uid, 'groups'), { name, createdAt: serverTimestamp() });
 }
 
 // ============================================================
@@ -250,16 +275,14 @@ export async function addGroup(name: string) {
 // ============================================================
 
 export async function fetchClients(): Promise<Client[]> {
-  const { data, error } = await supabase.from('clients').select('*').order('name');
-  if (error) throw error;
-  return (data || []).map(toClient);
+  const uid = getCurrentUid();
+  const snap = await getDocs(query(userCol(uid, 'clients'), orderBy('name')));
+  return snap.docs.map(d => toClient(d.id, d.data()));
 }
 
 export async function addClient(client: Omit<Client, 'id'>): Promise<Client> {
-  const session = await getSession();
-  if (!session) throw new Error('Not authenticated');
-  const { data, error } = await supabase.from('clients').insert({
-    user_id: session.user.id,
+  const uid = getCurrentUid();
+  const data = {
     name: client.name,
     pan: client.pan,
     group_name: client.group,
@@ -269,13 +292,15 @@ export async function addClient(client: Omit<Client, 'id'>): Promise<Client> {
     address: client.address || null,
     portal_password: client.portalPassword || null,
     gstin: client.gstin || null,
-  }).select().single();
-  if (error) throw error;
-  return toClient(data);
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(userCol(uid, 'clients'), data);
+  return toClient(ref.id, data);
 }
 
 export async function updateClient(client: Client): Promise<Client> {
-  const { data, error } = await supabase.from('clients').update({
+  const uid = getCurrentUid();
+  await updateDoc(userDoc(uid, 'clients', client.id), {
     name: client.name,
     pan: client.pan,
     group_name: client.group,
@@ -285,15 +310,14 @@ export async function updateClient(client: Client): Promise<Client> {
     address: client.address || null,
     portal_password: client.portalPassword || null,
     gstin: client.gstin || null,
-    updated_at: new Date().toISOString(),
-  }).eq('id', client.id).select().single();
-  if (error) throw error;
-  return toClient(data);
+    updatedAt: serverTimestamp(),
+  });
+  return client;
 }
 
 export async function deleteClient(id: string) {
-  const { error } = await supabase.from('clients').delete().eq('id', id);
-  if (error) throw error;
+  const uid = getCurrentUid();
+  await deleteDoc(userDoc(uid, 'clients', id));
 }
 
 // ============================================================
@@ -301,16 +325,14 @@ export async function deleteClient(id: string) {
 // ============================================================
 
 export async function fetchHearings(): Promise<Hearing[]> {
-  const { data, error } = await supabase.from('hearings').select('*').order('hearing_date', { ascending: true });
-  if (error) throw error;
-  return (data || []).map(toHearing);
+  const uid = getCurrentUid();
+  const snap = await getDocs(query(userCol(uid, 'hearings'), orderBy('hearing_date')));
+  return snap.docs.map(d => toHearing(d.id, d.data()));
 }
 
 export async function addHearing(hearing: Omit<Hearing, 'id'>): Promise<Hearing> {
-  const session = await getSession();
-  if (!session) throw new Error('Not authenticated');
-  const { data, error } = await supabase.from('hearings').insert({
-    user_id: session.user.id,
+  const uid = getCurrentUid();
+  const data = {
     client_id: hearing.clientId,
     client_name: hearing.clientName,
     case_type: hearing.caseType,
@@ -323,13 +345,15 @@ export async function addHearing(hearing: Omit<Hearing, 'id'>): Promise<Hearing>
     description: hearing.description || null,
     is_critical: hearing.isCritical || false,
     quoted_fees: hearing.quotedFees || 0,
-  }).select().single();
-  if (error) throw error;
-  return toHearing(data);
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(userCol(uid, 'hearings'), data);
+  return toHearing(ref.id, data);
 }
 
 export async function updateHearing(hearing: Hearing): Promise<Hearing> {
-  const { data, error } = await supabase.from('hearings').update({
+  const uid = getCurrentUid();
+  await updateDoc(userDoc(uid, 'hearings', hearing.id), {
     client_name: hearing.clientName,
     case_type: hearing.caseType,
     issue_date: hearing.issueDate || null,
@@ -341,9 +365,9 @@ export async function updateHearing(hearing: Hearing): Promise<Hearing> {
     description: hearing.description || null,
     is_critical: hearing.isCritical || false,
     quoted_fees: hearing.quotedFees || 0,
-  }).eq('id', hearing.id).select().single();
-  if (error) throw error;
-  return toHearing(data);
+    updatedAt: serverTimestamp(),
+  });
+  return hearing;
 }
 
 // ============================================================
@@ -351,16 +375,14 @@ export async function updateHearing(hearing: Hearing): Promise<Hearing> {
 // ============================================================
 
 export async function fetchInvoices(): Promise<Invoice[]> {
-  const { data, error } = await supabase.from('invoices').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(toInvoice);
+  const uid = getCurrentUid();
+  const snap = await getDocs(query(userCol(uid, 'invoices'), orderBy('createdAt', 'desc')));
+  return snap.docs.map(d => toInvoice(d.id, d.data()));
 }
 
 export async function addInvoice(invoice: Invoice): Promise<Invoice> {
-  const session = await getSession();
-  if (!session) throw new Error('Not authenticated');
-  const { data, error } = await supabase.from('invoices').insert({
-    user_id: session.user.id,
+  const uid = getCurrentUid();
+  const data = {
     invoice_number: invoice.invoiceNumber,
     client_id: invoice.clientId,
     client_name: invoice.clientName,
@@ -385,13 +407,15 @@ export async function addInvoice(invoice: Invoice): Promise<Invoice> {
     assessment_year: invoice.assessmentYear || null,
     case_type: invoice.caseType || null,
     notes: invoice.notes || null,
-  }).select().single();
-  if (error) throw error;
-  return toInvoice(data);
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(userCol(uid, 'invoices'), data);
+  return { ...invoice, id: ref.id };
 }
 
 export async function updateInvoice(invoice: Invoice): Promise<Invoice> {
-  const { data, error } = await supabase.from('invoices').update({
+  const uid = getCurrentUid();
+  await updateDoc(userDoc(uid, 'invoices', invoice.id), {
     invoice_number: invoice.invoiceNumber,
     client_id: invoice.clientId,
     client_name: invoice.clientName,
@@ -416,9 +440,9 @@ export async function updateInvoice(invoice: Invoice): Promise<Invoice> {
     assessment_year: invoice.assessmentYear || null,
     case_type: invoice.caseType || null,
     notes: invoice.notes || null,
-  }).eq('id', invoice.id).select().single();
-  if (error) throw error;
-  return toInvoice(data);
+    updatedAt: serverTimestamp(),
+  });
+  return invoice;
 }
 
 // ============================================================
@@ -426,16 +450,14 @@ export async function updateInvoice(invoice: Invoice): Promise<Invoice> {
 // ============================================================
 
 export async function fetchReceipts(): Promise<Receipt[]> {
-  const { data, error } = await supabase.from('receipts').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(toReceipt);
+  const uid = getCurrentUid();
+  const snap = await getDocs(query(userCol(uid, 'receipts'), orderBy('createdAt', 'desc')));
+  return snap.docs.map(d => toReceipt(d.id, d.data()));
 }
 
 export async function addReceipt(receipt: Receipt): Promise<Receipt> {
-  const session = await getSession();
-  if (!session) throw new Error('Not authenticated');
-  const { data, error } = await supabase.from('receipts').insert({
-    user_id: session.user.id,
+  const uid = getCurrentUid();
+  const data = {
     receipt_number: receipt.receiptNumber,
     client_id: receipt.clientId || null,
     group_id: receipt.groupId || null,
@@ -447,9 +469,10 @@ export async function addReceipt(receipt: Receipt): Promise<Receipt> {
     reference: receipt.reference || null,
     invoice_ids: receipt.invoiceIds || [],
     notes: receipt.notes || null,
-  }).select().single();
-  if (error) throw error;
-  return toReceipt(data);
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(userCol(uid, 'receipts'), data);
+  return { ...receipt, id: ref.id };
 }
 
 // ============================================================
@@ -457,19 +480,15 @@ export async function addReceipt(receipt: Receipt): Promise<Receipt> {
 // ============================================================
 
 export async function fetchBillingSettings(): Promise<BillingSettings | null> {
-  const { data, error } = await supabase.from('billing_settings').select('*').single();
-  if (error) {
-    if (error.code === 'PGRST116') return null; // no rows
-    throw error;
-  }
-  return data ? toBillingSettings(data) : null;
+  const uid = getCurrentUid();
+  const snap = await getDoc(doc(firestore, 'users', uid, 'settings', 'billing'));
+  if (!snap.exists()) return null;
+  return toBillingSettings(snap.data());
 }
 
 export async function saveBillingSettings(settings: BillingSettings) {
-  const session = await getSession();
-  if (!session) throw new Error('Not authenticated');
-  const { error } = await supabase.from('billing_settings').upsert({
-    user_id: session.user.id,
+  const uid = getCurrentUid();
+  await setDoc(doc(firestore, 'users', uid, 'settings', 'billing'), {
     practice_name: settings.practiceName,
     address: settings.address,
     pan: settings.pan,
@@ -483,6 +502,5 @@ export async function saveBillingSettings(settings: BillingSettings) {
     terms: settings.terms,
     default_notes: settings.defaultNotes,
     notes: settings.notes,
-  }, { onConflict: 'user_id' });
-  if (error) throw error;
+  });
 }
