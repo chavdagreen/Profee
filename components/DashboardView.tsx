@@ -4,7 +4,8 @@ import { Client, Hearing, Invoice, View } from '../types';
 import {
   Calendar as CalendarIcon, UserCheck, TrendingUp, AlertCircle,
   ChevronLeft, ChevronRight, Bell, ArrowUpRight, RefreshCw,
-  Smartphone, CheckCircle2, X, Gavel, Scale, Building2, Flame
+  Smartphone, CheckCircle2, X, Gavel, Scale, Building2, Flame,
+  Receipt
 } from 'lucide-react';
 import { syncAllHearingsToGoogleCalendar } from '../services/database';
 
@@ -14,17 +15,36 @@ interface DashboardViewProps {
   invoices: Invoice[];
   onNavigate: (view: View) => void;
   onSelectClient: (clientId: string, tab: 'details' | 'financials' | 'proceedings') => void;
+  isGoogleConnected?: boolean;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoices, onNavigate, onSelectClient }) => {
+interface PulseCardProps {
+  title: string;
+  count: number;
+  icon: React.ElementType;
+  color: string;
+  onClick: () => void;
+  index: number;
+  label?: string;
+}
+
+const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoices, onNavigate, onSelectClient, isGoogleConnected }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [drillDown, setDrillDown] = useState<{ type: 'notices' | 'hearings' | 'daily_notices' | 'daily_hearings'; data: Hearing[] } | null>(null);
   const [dayEvents, setDayEvents] = useState<{ day: number; events: Hearing[] } | null>(null);
 
+  // Single source of truth for today's date
+  const today = useMemo(() => new Date(), []);
+  const todayStr = useMemo(() => today.toISOString().split('T')[0], [today]);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }, [today]);
+
   // Calendar state - track displayed month/year
-  const now = new Date();
-  const [displayMonth, setDisplayMonth] = useState(now.getMonth()); // 0-indexed
-  const [displayYear, setDisplayYear] = useState(now.getFullYear());
+  const [displayMonth, setDisplayMonth] = useState(today.getMonth());
+  const [displayYear, setDisplayYear] = useState(today.getFullYear());
 
   const displayMonthName = new Date(displayYear, displayMonth).toLocaleString('default', { month: 'long' });
 
@@ -58,37 +78,41 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
   };
 
   const goToToday = () => {
-    setDisplayMonth(now.getMonth());
-    setDisplayYear(now.getFullYear());
+    setDisplayMonth(today.getMonth());
+    setDisplayYear(today.getFullYear());
     setDayEvents(null);
   };
 
-  const todayStr = now.toISOString().split('T')[0];
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  const todayDay = now.getDate();
-  const isCurrentMonth = displayMonth === now.getMonth() && displayYear === now.getFullYear();
+  const todayDay = today.getDate();
+  const isCurrentMonth = displayMonth === today.getMonth() && displayYear === today.getFullYear();
 
-  const today = new Date();
-  const lastSevenDays = new Date();
-  lastSevenDays.setDate(today.getDate() - 7);
-  const nextSevenDays = new Date();
-  nextSevenDays.setDate(today.getDate() + 7);
+  const sevenDaysAgo = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 7);
+    return d;
+  }, [today]);
+
+  const sevenDaysAhead = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 7);
+    return d;
+  }, [today]);
 
   // Filter Data for Dashboard Pulse Cards
   const recentNotices = useMemo(() => {
     return hearings.filter(h => {
       if (!h.issueDate) return false;
       const issue = new Date(h.issueDate);
-      return issue >= lastSevenDays && issue <= today;
+      return issue >= sevenDaysAgo && issue <= today;
     });
-  }, [hearings]);
+  }, [hearings, sevenDaysAgo, today]);
 
   const upcomingHearings = useMemo(() => {
     return hearings.filter(h => {
       const hearing = new Date(h.hearingDate);
-      return hearing >= today && hearing <= nextSevenDays;
+      return hearing >= today && hearing <= sevenDaysAhead;
     });
-  }, [hearings]);
+  }, [hearings, today, sevenDaysAhead]);
 
   const noticesTodayOrYesterday = useMemo(() => {
     return hearings.filter(h => h.issueDate === todayStr || h.issueDate === yesterdayStr);
@@ -126,15 +150,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
     }
   };
 
-  const getForumDotColor = (forum: string) => {
-    switch (forum) {
-      case 'AO': return 'bg-blue-500';
-      case 'CIT(A)': return 'bg-indigo-500';
-      case 'ITAT': return 'bg-purple-500';
-      default: return 'bg-slate-500';
-    }
-  };
-
   const getForumIcon = (forum: string) => {
     switch (forum) {
       case 'AO': return Building2;
@@ -144,7 +159,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
     }
   };
 
-  const PulseCard = ({ title, count, icon: Icon, color, onClick, index, label = "7-Day Pulse" }: any) => (
+  const PulseCard = ({ title, count, icon: Icon, color, onClick, index, label = "7-Day Pulse" }: PulseCardProps) => (
     <button
       onClick={onClick}
       style={{ animationDelay: `${index * 150}ms` }}
@@ -311,11 +326,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
             <div className="flex items-center gap-6">
               <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Litigation Calendar</h3>
               <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600">
-                 <div className={`flex items-center gap-2 ${isSyncing ? 'text-indigo-600' : 'text-slate-400'}`}>
+                 <div className={`flex items-center gap-2 ${isSyncing ? 'text-indigo-600' : isGoogleConnected ? 'text-emerald-500' : 'text-slate-400'}`}>
                     <Smartphone size={14} />
-                    <span className="text-[10px] font-bold">{isSyncing ? 'Syncing Google...' : 'G-Sync Active'}</span>
+                    <span className="text-[10px] font-bold">
+                      {isSyncing ? 'Syncing Google...' : isGoogleConnected ? 'G-Sync Active' : 'Connect Google'}
+                    </span>
                  </div>
-                 <button onClick={handleSync} className={`transition-all ${isSyncing ? 'animate-spin text-indigo-600' : 'text-slate-300 hover:text-indigo-600'}`}>
+                 <button
+                   onClick={handleSync}
+                   disabled={!isGoogleConnected}
+                   title={isGoogleConnected ? 'Sync to Google Calendar' : 'Sign in with Google to enable sync'}
+                   className={`transition-all ${isSyncing ? 'animate-spin text-indigo-600' : isGoogleConnected ? 'text-slate-300 hover:text-indigo-600' : 'text-slate-200 cursor-not-allowed'}`}
+                 >
                     <RefreshCw size={14} />
                  </button>
               </div>
@@ -440,28 +462,99 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
           )}
         </div>
 
-        {/* Notifications List */}
+        {/* Alerts Panel */}
         <div className="clay-card p-8 border-none flex flex-col bg-white dark:bg-slate-800 shadow-2xl animate-in slide-in-from-right-8 duration-700 h-full max-h-[600px]">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
               <Bell size={22} className="text-rose-500 animate-pulse" /> Alerts
             </h3>
+            {(() => {
+              const alertCount = hearingsScheduledToday.length + invoices.filter(i => i.status === 'Unpaid' && i.dueDate < todayStr).length;
+              return alertCount > 0 ? (
+                <span className="text-[9px] font-black bg-rose-500 text-white px-2 py-0.5 rounded-full">{alertCount}</span>
+              ) : null;
+            })()}
           </div>
-          <div className="space-y-6 overflow-y-auto custom-scrollbar flex-1 pr-2">
-            {hearings.map((h, i) => (
-              <button
-                key={h.id}
-                onClick={() => onSelectClient(h.clientId, 'proceedings')}
-                className="w-full p-5 rounded-[2rem] bg-slate-50 dark:bg-slate-900/40 border border-transparent hover:border-indigo-100 hover:bg-white dark:hover:bg-slate-800 transition-all group text-left"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-3 py-1 rounded-xl uppercase`}>{h.forum}</span>
-                  <CheckCircle2 size={14} className="text-slate-200 group-hover:text-emerald-500 transition-colors" />
+          <div className="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
+            {/* Today's hearings */}
+            {hearingsScheduledToday.length > 0 && (
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Today's Hearings</p>
+                {hearingsScheduledToday.map(h => (
+                  <button
+                    key={h.id}
+                    onClick={() => onSelectClient(h.clientId, 'proceedings')}
+                    className="w-full p-4 rounded-[1.5rem] bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all group text-left mb-2"
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-2 py-0.5 rounded-lg uppercase`}>{h.forum}</span>
+                      <CheckCircle2 size={13} className="text-emerald-400" />
+                    </div>
+                    <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{h.time || '—'} &bull; {h.caseType}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Critical hearings in next 7 days */}
+            {(() => {
+              const critical = upcomingHearings.filter(h => h.isCritical && h.hearingDate !== todayStr);
+              return critical.length > 0 ? (
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Critical Matters (7D)</p>
+                  {critical.map(h => (
+                    <button
+                      key={h.id}
+                      onClick={() => onSelectClient(h.clientId, 'proceedings')}
+                      className="w-full p-4 rounded-[1.5rem] bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/40 hover:bg-rose-100 transition-all group text-left mb-2"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-2 py-0.5 rounded-lg uppercase`}>{h.forum}</span>
+                        <AlertCircle size={13} className="text-rose-400" />
+                      </div>
+                      <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
+                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">{h.hearingDate} &bull; {h.caseType}</p>
+                    </button>
+                  ))}
                 </div>
-                <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight mb-2 group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
-                <p className="text-[10px] font-bold text-slate-400">{h.hearingDate} &bull; {h.caseType}</p>
-              </button>
-            ))}
+              ) : null;
+            })()}
+
+            {/* Overdue unpaid invoices */}
+            {(() => {
+              const overdue = invoices.filter(i => i.status === 'Unpaid' && i.dueDate < todayStr);
+              return overdue.length > 0 ? (
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Overdue Invoices</p>
+                  {overdue.map(inv => (
+                    <button
+                      key={inv.id}
+                      onClick={() => onNavigate('billing')}
+                      className="w-full p-4 rounded-[1.5rem] bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 hover:bg-amber-100 transition-all group text-left mb-2"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-lg uppercase">Overdue</span>
+                        <Receipt size={13} className="text-amber-400" />
+                      </div>
+                      <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{inv.clientName}</p>
+                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">Due {inv.dueDate} &bull; ₹{(inv.total || 0).toLocaleString()}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
+
+            {/* Empty state */}
+            {hearingsScheduledToday.length === 0 &&
+             upcomingHearings.filter(h => h.isCritical).length === 0 &&
+             invoices.filter(i => i.status === 'Unpaid' && i.dueDate < todayStr).length === 0 && (
+              <div className="flex flex-col items-center justify-center h-40 text-center">
+                <CheckCircle2 size={36} className="text-emerald-400 mb-3" />
+                <p className="text-sm font-black text-slate-500">All Clear</p>
+                <p className="text-[10px] font-bold text-slate-300 mt-1">No hearings today or overdue invoices</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -5,18 +5,12 @@ import {
   Users,
   Gavel,
   ReceiptIndianRupee,
-  Plus,
   Bell,
-  Search,
-  Sun,
-  Moon,
   Menu,
   X,
-  Sparkles,
   RefreshCw,
   LogOut,
   ChevronRight,
-  Settings
 } from 'lucide-react';
 import { View, Client, Hearing, Invoice, Receipt, BillingSettings } from './types';
 import DashboardView from './components/DashboardView';
@@ -479,7 +473,7 @@ const App: React.FC = () => {
           />
         ) : (
         <div key={activeView} className="animate-in fade-in slide-in-from-bottom-6 duration-500">
-          {activeView === 'dashboard' && <DashboardView clients={clients} hearings={hearings} invoices={invoices} onNavigate={setActiveView} onSelectClient={handleNavigateToClientProfile} />}
+          {activeView === 'dashboard' && <DashboardView clients={clients} hearings={hearings} invoices={invoices} onNavigate={setActiveView} onSelectClient={handleNavigateToClientProfile} isGoogleConnected={isGoogleConnected} />}
           {activeView === 'clients' && <ClientsView clients={clients} setClients={handleSetClients} hearings={hearings} setHearings={handleSetHearings} groups={groups} setGroups={handleSetGroups} setActiveView={setActiveView} invoices={invoices} receipts={receipts} onQuickBill={handleBillMatter} initialClientId={targetClientId} initialTab={targetProfileTab} clearNavigation={() => { setTargetClientId(null); setTargetProfileTab('details'); }} />}
           {activeView === 'proceedings' && <ProceedingsView hearings={hearings} clients={clients} setHearings={handleSetHearings} onBillMatter={handleBillMatter} />}
           {activeView === 'billing' && <BillingView invoices={invoices} setInvoices={handleSetInvoices} clients={clients} receipts={receipts} setReceipts={handleSetReceipts} groups={groups} settings={billingSettings} setSettings={handleSetBillingSettings} prefill={pendingInvoiceFromMatter} onPrefillProcessed={() => setPendingInvoiceFromMatter(null)} />}
