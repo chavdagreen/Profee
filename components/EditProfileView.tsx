@@ -212,7 +212,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
 
             <div className="pt-6 border-t">
-              <label className="text-[10px] font-bold text-slate-400 mb-3 block">Brand Theme Color</label>
+              <label className="text-xs font-bold text-slate-400 mb-3 block">Brand Theme Color</label>
               <div className="flex gap-4">
                 {['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#0f172a', '#7c3aed', '#db2777'].map(c => (
                   <button

@@ -257,22 +257,22 @@ const BillingView: React.FC<BillingViewProps> = ({
 
       <div className="grid grid-cols-2 gap-12 mb-12">
         <div className="p-6 rounded-xl border border-slate-200" style={{ backgroundColor: '#f8fafc' }}>
-           <p className="text-[10px] font-bold mb-3" style={{ color: invoice.themeColor }}>Billed By</p>
+           <p className="text-xs font-bold mb-3" style={{ color: invoice.themeColor }}>Billed By</p>
            <p className="font-black text-sm uppercase mb-1">{settings.practiceName}</p>
-           <p className="text-[10px] text-slate-500 font-bold leading-relaxed mb-3">{settings.address}</p>
-           <p className="text-[10px] font-black uppercase"><span className="text-slate-400">GSTIN</span> {settings.gstin}</p>
-           <p className="text-[10px] font-black uppercase"><span className="text-slate-400">PAN</span> {settings.pan}</p>
+           <p className="text-xs text-slate-500 font-bold leading-relaxed mb-3">{settings.address}</p>
+           <p className="text-xs font-black uppercase"><span className="text-slate-400">GSTIN</span> {settings.gstin}</p>
+           <p className="text-xs font-black uppercase"><span className="text-slate-400">PAN</span> {settings.pan}</p>
         </div>
         <div className="p-6 rounded-xl border border-slate-200" style={{ backgroundColor: '#f8fafc' }}>
-           <p className="text-[10px] font-bold text-slate-400 mb-3">Billed To</p>
+           <p className="text-xs font-bold text-slate-400 mb-3">Billed To</p>
            <p className="font-black text-sm uppercase mb-1">{invoice.clientName}</p>
-           <p className="text-[10px] text-slate-500 font-bold leading-relaxed mb-3">{invoice.clientAddress || 'Address details on file'}</p>
-           <p className="text-[10px] font-black uppercase"><span className="text-slate-400">GSTIN</span> {invoice.clientGstin || 'URD'}</p>
-           <p className="text-[10px] font-black uppercase"><span className="text-slate-400">PAN</span> {invoice.clientPan || 'NA'}</p>
+           <p className="text-xs text-slate-500 font-bold leading-relaxed mb-3">{invoice.clientAddress || 'Address details on file'}</p>
+           <p className="text-xs font-black uppercase"><span className="text-slate-400">GSTIN</span> {invoice.clientGstin || 'URD'}</p>
+           <p className="text-xs font-black uppercase"><span className="text-slate-400">PAN</span> {invoice.clientPan || 'NA'}</p>
         </div>
       </div>
 
-      <div className="flex justify-between items-center px-6 py-2 bg-slate-50 rounded-xl mb-6 text-[10px] font-bold">
+      <div className="flex justify-between items-center px-6 py-2 bg-slate-50 rounded-xl mb-6 text-xs font-bold">
         <span>Place of Supply: <b className="text-slate-800">{invoice.placeOfSupply}</b></span>
         <span>Country of Supply: <b className="text-slate-800">{invoice.countryOfSupply}</b></span>
       </div>
@@ -306,7 +306,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                   </td>
                   <td className="px-4 py-6 text-slate-400">{item.hsn}</td>
                   <td className="px-4 py-6 text-center">{item.qty}</td>
-                  {settings.isGstApplicable && <td className="px-4 py-6 text-center text-[10px] font-black">{item.gstPercent}%</td>}
+                  {settings.isGstApplicable && <td className="px-4 py-6 text-center text-xs font-black">{item.gstPercent}%</td>}
                   <td className="px-4 py-6 text-right">₹{(taxable || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   {settings.isGstApplicable && <td className="px-4 py-6 text-right text-slate-400">₹{(tax / 2 || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>}
                   {settings.isGstApplicable && <td className="px-4 py-6 text-right text-slate-400">₹{(tax / 2 || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>}
@@ -321,7 +321,7 @@ const BillingView: React.FC<BillingViewProps> = ({
       <div className="grid grid-cols-2 gap-12 mb-12">
         <div className="space-y-10">
            <div>
-              <h4 className="text-[10px] font-bold mb-4" style={{ color: invoice.themeColor }}>Bank & Payment Details</h4>
+              <h4 className="text-xs font-bold mb-4" style={{ color: invoice.themeColor }}>Bank & Payment Details</h4>
               <div className="flex gap-8">
                 <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-3">
                   {[
@@ -334,7 +334,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                   ].map(([label, value]) => (
                     <div key={label}>
                       <p className="text-xs font-black text-slate-400 uppercase leading-tight">{label}</p>
-                      <p className="text-[10px] font-bold text-slate-600">{value}</p>
+                      <p className="text-xs font-bold text-slate-600">{value}</p>
                     </div>
                   ))}
                 </div>
@@ -347,7 +347,7 @@ const BillingView: React.FC<BillingViewProps> = ({
               </div>
            </div>
            <div>
-              <h4 className="text-[10px] font-bold text-slate-400 mb-4">Terms & Conditions</h4>
+              <h4 className="text-xs font-bold text-slate-400 mb-4">Terms & Conditions</h4>
               <ul className="space-y-1">
                 {settings.terms.map((t, i) => <li key={i} className="text-xs text-slate-500 font-semibold">{i+1}. {t}</li>)}
               </ul>
@@ -380,7 +380,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
       <div className="pt-12 border-t border-slate-100 flex justify-between items-end">
          <div>
-            <h4 className="text-[10px] font-bold text-slate-400 mb-2">Additional Notes</h4>
+            <h4 className="text-xs font-bold text-slate-400 mb-2">Additional Notes</h4>
             <p className="text-xs text-slate-400 max-w-sm italic leading-relaxed">{invoice.notes}</p>
          </div>
          <div className="text-right">
@@ -389,7 +389,7 @@ const BillingView: React.FC<BillingViewProps> = ({
       </div>
       <div className="pt-6 flex justify-end">
          <div className="text-right">
-            <p className="text-[10px] font-black text-slate-300 uppercase mb-1">Authorized Signatory</p>
+            <p className="text-xs font-black text-slate-300 uppercase mb-1">Authorized Signatory</p>
             <div className="h-10"></div>
             <p className="text-xs font-black tracking-tighter">{settings.practiceName}</p>
          </div>
@@ -407,7 +407,7 @@ const BillingView: React.FC<BillingViewProps> = ({
             <CheckCircle size={20} />
             <h1 className="text-xl font-black tracking-tight">Payment Receipt</h1>
           </div>
-          <p className="text-[10px] font-black text-slate-400 tracking-wide">Ref: {receipt.receiptNumber}</p>
+          <p className="text-xs font-black text-slate-400 tracking-wide">Ref: {receipt.receiptNumber}</p>
         </div>
         <div className="text-right">
           <h2 className="text-xl font-black tracking-tighter uppercase">{settings.practiceName}</h2>
@@ -443,7 +443,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
          <div className="bg-emerald-600 text-white p-8 rounded-2xl flex items-center justify-between">
             <div>
-               <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em]">Amount Received</p>
+               <p className="text-xs font-black uppercase opacity-60 tracking-[0.2em]">Amount Received</p>
                <p className="text-4xl font-black tracking-tighter">₹{(receipt.amount || 0).toLocaleString()}</p>
             </div>
             <div className="text-right">
@@ -452,7 +452,7 @@ const BillingView: React.FC<BillingViewProps> = ({
          </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-12 text-[10px]">
+      <div className="grid grid-cols-2 gap-12 text-xs">
         <div>
            <p className="font-black text-slate-300 tracking-wide mb-3">Amount In Words</p>
            <p className="font-black text-slate-600 uppercase leading-relaxed italic">{numberToWords(receipt.amount || 0)}</p>
@@ -659,7 +659,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                        </div>
                     </div>
                     <div className="clay-card bg-slate-50 p-8 border-none space-y-4 h-fit">
-                       <h5 className="text-[10px] font-bold text-slate-400 border-b pb-2">Financial Breakdown</h5>
+                       <h5 className="text-xs font-bold text-slate-400 border-b pb-2">Financial Breakdown</h5>
                        <div className="space-y-3">
                           <div className="flex justify-between text-xs font-bold"><span>Taxable Value</span><span>₹{(totals.taxableAmount || 0).toLocaleString()}</span></div>
                           {settings.isGstApplicable && (
@@ -830,7 +830,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
           <table className="w-full text-sm mb-8">
             <thead>
-              <tr className="bg-slate-100 text-[10px] font-black text-slate-500">
+              <tr className="bg-slate-100 text-xs font-black text-slate-500">
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Ref#</th>
                 <th className="px-4 py-3 text-left">Description</th>
@@ -855,20 +855,20 @@ const BillingView: React.FC<BillingViewProps> = ({
 
           <div className="grid grid-cols-3 gap-4 p-6 bg-slate-50 rounded-2xl">
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 mb-1">Total Invoiced</p>
+              <p className="text-xs font-bold text-slate-400 mb-1">Total Invoiced</p>
               <p className="text-xl font-black text-rose-600">₹{totalInvoiced.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 mb-1">Total Received</p>
+              <p className="text-xs font-bold text-slate-400 mb-1">Total Received</p>
               <p className="text-xl font-black text-emerald-600">₹{totalReceived.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 mb-1">Outstanding</p>
+              <p className="text-xs font-bold text-slate-400 mb-1">Outstanding</p>
               <p className={`text-xl font-black ${totalInvoiced - totalReceived >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₹{Math.abs(totalInvoiced - totalReceived).toLocaleString()}</p>
             </div>
           </div>
 
-          <p className="text-[10px] text-slate-400 text-center mt-6">Generated on {new Date().toLocaleDateString('en-IN')} | {settings.practiceName}</p>
+          <p className="text-xs text-slate-400 text-center mt-6">Generated on {new Date().toLocaleDateString('en-IN')} | {settings.practiceName}</p>
         </div>
       </div>
     );
@@ -983,7 +983,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
             <table className="w-full text-sm mb-8">
               <thead>
-                <tr className="bg-slate-100 text-[10px] font-black text-slate-500">
+                <tr className="bg-slate-100 text-xs font-black text-slate-500">
                   <th className="px-4 py-3 text-left">Client</th>
                   <th className="px-4 py-3 text-right">Total Invoiced (₹)</th>
                   <th className="px-4 py-3 text-right">Total Received (₹)</th>
@@ -1010,7 +1010,7 @@ const BillingView: React.FC<BillingViewProps> = ({
               </tfoot>
             </table>
 
-            <p className="text-[10px] text-slate-400 text-center mt-6">Generated on {new Date().toLocaleDateString('en-IN')} | {settings.practiceName}</p>
+            <p className="text-xs text-slate-400 text-center mt-6">Generated on {new Date().toLocaleDateString('en-IN')} | {settings.practiceName}</p>
           </div>
         )}
       </div>
@@ -1059,7 +1059,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
         <table className="w-full text-left font-bold text-sm">
            <thead>
-             <tr className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-bold text-slate-400 border-b dark:border-slate-700">
+             <tr className="bg-slate-50 dark:bg-slate-900/50 text-xs font-bold text-slate-400 border-b dark:border-slate-700">
                <th className="px-6 py-5">Number</th>
                <th className="px-6 py-5">Party</th>
                <th className="px-6 py-5">Date</th>

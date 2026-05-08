@@ -171,7 +171,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
           <Icon size={32} />
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-500 transition-colors">{label}</span>
+          <span className="text-xs font-bold text-slate-400 group-hover:text-indigo-500 transition-colors">{label}</span>
           <ArrowUpRight size={18} className="text-slate-300 mt-1" />
         </div>
       </div>
@@ -260,7 +260,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
              <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-8">
                 <table className="w-full text-left font-bold text-sm">
                    <thead>
-                      <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b dark:border-slate-700">
+                      <tr className="text-xs font-bold text-slate-400 uppercase tracking-wide border-b dark:border-slate-700">
                          <th className="px-4 py-4">Client Name</th>
                          <th className="px-4 py-4">AY</th>
                          <th className="px-4 py-4">Matter Type</th>
@@ -280,7 +280,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                            <td className="px-4 py-6 text-indigo-600">AY {h.assessmentYear}</td>
                            <td className="px-4 py-6 text-slate-500 text-xs">{h.caseType}</td>
                            <td className="px-4 py-6 text-slate-400 text-[11px]">{drillDown.type === 'notices' || drillDown.type === 'daily_notices' ? h.issueDate : h.hearingDate}</td>
-                           <td className="px-4 py-6 text-right"><span className={`px-3 py-1 ${getForumColor(h.forum)} text-white rounded-lg text-[10px] font-black uppercase`}>{h.forum}</span></td>
+                           <td className="px-4 py-6 text-right"><span className={`px-3 py-1 ${getForumColor(h.forum)} text-white rounded-lg text-[11px] font-black uppercase`}>{h.forum}</span></td>
                         </tr>
                       ))}
                       {drillDown.data.length === 0 && (
@@ -328,7 +328,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
               <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600">
                  <div className={`flex items-center gap-2 ${isSyncing ? 'text-indigo-600' : isGoogleConnected ? 'text-emerald-500' : 'text-slate-400'}`}>
                     <Smartphone size={14} />
-                    <span className="text-[10px] font-bold">
+                    <span className="text-xs font-bold">
                       {isSyncing ? 'Syncing Google...' : isGoogleConnected ? 'G-Sync Active' : 'Connect Google'}
                     </span>
                  </div>
@@ -343,7 +343,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
               </div>
             </div>
             <div className="flex items-center gap-2">
-               <button onClick={goToToday} className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mr-2 hover:underline">Today</button>
+               <button onClick={goToToday} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mr-2 hover:underline">Today</button>
                <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 mr-4">{displayMonthName} {displayYear}</span>
                <button onClick={goToPrevMonth} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-2xl hover:bg-indigo-50 transition-all"><ChevronLeft size={20} /></button>
                <button onClick={goToNextMonth} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-2xl hover:bg-indigo-50 transition-all"><ChevronRight size={20} /></button>
@@ -366,7 +366,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
 
           <div className="grid grid-cols-7 gap-4">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-[10px] font-bold text-slate-400 text-center pb-4">{day}</div>
+              <div key={day} className="text-xs font-bold text-slate-400 text-center pb-4">{day}</div>
             ))}
             {/* Empty cells for first day offset */}
             {Array.from({ length: calendarData.firstDayOfWeek }).map((_, i) => (
@@ -398,7 +398,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                 >
                   <span className="text-sm">{day}</span>
                   {hasHearing && dayHearings.length > 1 && (
-                    <div className="absolute bottom-1.5 bg-white/20 text-[8px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                    <div className="absolute bottom-1.5 bg-white/20 text-[11px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
                       +{dayHearings.length - 1}
                     </div>
                   )}
@@ -442,14 +442,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                                <ForumIcon size={24} />
                             </div>
                             <div className="text-left">
-                               <p className="text-[10px] font-bold text-indigo-600">Matter: {e.forum}</p>
+                               <p className="text-xs font-bold text-indigo-600">Matter: {e.forum}</p>
                                <h5 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">{e.clientName}</h5>
                                <p className="text-xs font-bold text-slate-400 mt-0.5">{e.caseType} &bull; AY {e.assessmentYear}</p>
                             </div>
                          </div>
                          <div className="flex items-center gap-4">
                             <div className="text-right">
-                               <p className="text-[9px] font-bold text-slate-300">Scheduled At</p>
+                               <p className="text-[11px] font-bold text-slate-300">Scheduled At</p>
                                <p className="text-sm font-black text-slate-600 dark:text-slate-300">{e.time}</p>
                             </div>
                             <ChevronRight size={24} className="text-slate-200 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
@@ -471,7 +471,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
             {(() => {
               const alertCount = hearingsScheduledToday.length + invoices.filter(i => i.status === 'Unpaid' && i.dueDate < todayStr).length;
               return alertCount > 0 ? (
-                <span className="text-[9px] font-black bg-rose-500 text-white px-2 py-0.5 rounded-full">{alertCount}</span>
+                <span className="text-[11px] font-black bg-rose-500 text-white px-2 py-0.5 rounded-full">{alertCount}</span>
               ) : null;
             })()}
           </div>
@@ -479,7 +479,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
             {/* Today's hearings */}
             {hearingsScheduledToday.length > 0 && (
               <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Today's Hearings</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Today's Hearings</p>
                 {hearingsScheduledToday.map(h => (
                   <button
                     key={h.id}
@@ -487,11 +487,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                     className="w-full p-4 rounded-[1.5rem] bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all group text-left mb-2"
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-2 py-0.5 rounded-lg uppercase`}>{h.forum}</span>
+                      <span className={`text-[11px] font-black ${getForumColor(h.forum)} text-white px-2 py-0.5 rounded-lg uppercase`}>{h.forum}</span>
                       <CheckCircle2 size={13} className="text-emerald-400" />
                     </div>
                     <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
-                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{h.time || '—'} &bull; {h.caseType}</p>
+                    <p className="text-xs font-bold text-slate-400 mt-0.5">{h.time || '—'} &bull; {h.caseType}</p>
                   </button>
                 ))}
               </div>
@@ -502,7 +502,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
               const critical = upcomingHearings.filter(h => h.isCritical && h.hearingDate !== todayStr);
               return critical.length > 0 ? (
                 <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Critical Matters (7D)</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Critical Matters (7D)</p>
                   {critical.map(h => (
                     <button
                       key={h.id}
@@ -510,11 +510,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                       className="w-full p-4 rounded-[1.5rem] bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/40 hover:bg-rose-100 transition-all group text-left mb-2"
                     >
                       <div className="flex justify-between items-start mb-1">
-                        <span className={`text-[9px] font-black ${getForumColor(h.forum)} text-white px-2 py-0.5 rounded-lg uppercase`}>{h.forum}</span>
+                        <span className={`text-[11px] font-black ${getForumColor(h.forum)} text-white px-2 py-0.5 rounded-lg uppercase`}>{h.forum}</span>
                         <AlertCircle size={13} className="text-rose-400" />
                       </div>
                       <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{h.clientName}</p>
-                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">{h.hearingDate} &bull; {h.caseType}</p>
+                      <p className="text-xs font-bold text-slate-400 mt-0.5">{h.hearingDate} &bull; {h.caseType}</p>
                     </button>
                   ))}
                 </div>
@@ -526,7 +526,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
               const overdue = invoices.filter(i => i.status === 'Unpaid' && i.dueDate < todayStr);
               return overdue.length > 0 ? (
                 <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Overdue Invoices</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Overdue Invoices</p>
                   {overdue.map(inv => (
                     <button
                       key={inv.id}
@@ -534,11 +534,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
                       className="w-full p-4 rounded-[1.5rem] bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 hover:bg-amber-100 transition-all group text-left mb-2"
                     >
                       <div className="flex justify-between items-start mb-1">
-                        <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-lg uppercase">Overdue</span>
+                        <span className="text-[11px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-lg uppercase">Overdue</span>
                         <Receipt size={13} className="text-amber-400" />
                       </div>
                       <p className="font-black text-slate-800 dark:text-slate-200 text-sm leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{inv.clientName}</p>
-                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">Due {inv.dueDate} &bull; ₹{(inv.total || 0).toLocaleString()}</p>
+                      <p className="text-xs font-bold text-slate-400 mt-0.5">Due {inv.dueDate} &bull; ₹{(inv.total || 0).toLocaleString()}</p>
                     </button>
                   ))}
                 </div>
@@ -552,7 +552,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
               <div className="flex flex-col items-center justify-center h-40 text-center">
                 <CheckCircle2 size={36} className="text-emerald-400 mb-3" />
                 <p className="text-sm font-black text-slate-500">All Clear</p>
-                <p className="text-[10px] font-bold text-slate-300 mt-1">No hearings today or overdue invoices</p>
+                <p className="text-xs font-bold text-slate-300 mt-1">No hearings today or overdue invoices</p>
               </div>
             )}
           </div>
