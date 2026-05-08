@@ -5,12 +5,11 @@ import {
   Users,
   Gavel,
   ReceiptIndianRupee,
-  Bell,
   Menu,
-  X,
   RefreshCw,
   LogOut,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 import { View, Client, Hearing, Invoice, Receipt, BillingSettings } from './types';
 import DashboardView from './components/DashboardView';
@@ -86,9 +85,6 @@ const App: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [pendingInvoiceFromMatter, setPendingInvoiceFromMatter] = useState<Partial<Invoice> | null>(null);
-
-  // Edit Profile state
-  const [showEditProfile, setShowEditProfile] = useState(false);
 
   // Check if user logged in with Google (for calendar sync status)
   const isGoogleConnected = user?.providerData?.some((p: any) => p.providerId === 'google.com');
@@ -414,23 +410,22 @@ const App: React.FC = () => {
           <NavItem view="clients" icon={<Users size={22} />} label="Client Vault" />
           <NavItem view="proceedings" icon={<Gavel size={22} />} label="Litigation" />
           <NavItem view="billing" icon={<ReceiptIndianRupee size={22} />} label="Accounts" />
+          <NavItem view="settings" icon={<Settings size={22} />} label="Profile & Settings" />
         </nav>
 
         <div className="mt-auto space-y-4">
-          <div className="clay-card p-6 bg-white dark:bg-slate-800 border-none shadow-xl">
+          <div className="clay-card p-5 bg-white dark:bg-slate-800 border-none shadow-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black shadow-lg">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg flex-shrink-0">
                 {(user?.email?.[0] || 'U').toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-xs text-slate-800 dark:text-slate-200 truncate tracking-tight">{billingSettings.practiceName}</p>
-                <p className="text-[9px] text-slate-400 truncate">{user?.email}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <button onClick={() => setShowEditProfile(true)} className="text-[10px] text-indigo-500 font-black tracking-wide hover:underline">Edit</button>
+                <p className="font-black text-sm text-slate-800 dark:text-slate-200 truncate">{billingSettings.practiceName}</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{user?.email}</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <button onClick={toggleTheme} className="text-xs text-indigo-500 font-bold hover:underline">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</button>
                   <span className="text-slate-300">&bull;</span>
-                  <button onClick={toggleTheme} className="text-[10px] text-indigo-500 font-black tracking-wide hover:underline">{isDarkMode ? 'Light' : 'Dark'}</button>
-                  <span className="text-slate-300">&bull;</span>
-                  <button onClick={handleLogout} className="text-[10px] text-slate-400 font-black tracking-wide hover:text-rose-500 transition-colors">Logout</button>
+                  <button onClick={handleLogout} className="text-xs text-slate-400 font-bold hover:text-rose-500 transition-colors">Logout</button>
                 </div>
               </div>
             </div>
@@ -458,27 +453,27 @@ const App: React.FC = () => {
             <NavItem view="clients" icon={<Users size={22} />} label="Client Vault" />
             <NavItem view="proceedings" icon={<Gavel size={22} />} label="Litigation" />
             <NavItem view="billing" icon={<ReceiptIndianRupee size={22} />} label="Accounts" />
+            <NavItem view="settings" icon={<Settings size={22} />} label="Profile & Settings" />
           </div>
         </div>
       )}
 
       {/* Main View */}
       <main className="flex-1 p-6 md:p-12 overflow-y-auto custom-scrollbar relative">
-        {showEditProfile ? (
-          <EditProfileView
-            settings={billingSettings}
-            onSave={(updated) => handleSetBillingSettings(updated)}
-            onBack={() => setShowEditProfile(false)}
-            isGoogleConnected={isGoogleConnected}
-          />
-        ) : (
         <div key={activeView} className="animate-in fade-in slide-in-from-bottom-6 duration-500">
           {activeView === 'dashboard' && <DashboardView clients={clients} hearings={hearings} invoices={invoices} onNavigate={setActiveView} onSelectClient={handleNavigateToClientProfile} isGoogleConnected={isGoogleConnected} />}
           {activeView === 'clients' && <ClientsView clients={clients} setClients={handleSetClients} hearings={hearings} setHearings={handleSetHearings} groups={groups} setGroups={handleSetGroups} setActiveView={setActiveView} invoices={invoices} receipts={receipts} onQuickBill={handleBillMatter} initialClientId={targetClientId} initialTab={targetProfileTab} clearNavigation={() => { setTargetClientId(null); setTargetProfileTab('details'); }} />}
           {activeView === 'proceedings' && <ProceedingsView hearings={hearings} clients={clients} setHearings={handleSetHearings} onBillMatter={handleBillMatter} />}
           {activeView === 'billing' && <BillingView invoices={invoices} setInvoices={handleSetInvoices} clients={clients} receipts={receipts} setReceipts={handleSetReceipts} groups={groups} settings={billingSettings} setSettings={handleSetBillingSettings} prefill={pendingInvoiceFromMatter} onPrefillProcessed={() => setPendingInvoiceFromMatter(null)} />}
+          {activeView === 'settings' && (
+            <EditProfileView
+              settings={billingSettings}
+              onSave={(updated) => { handleSetBillingSettings(updated); setActiveView('dashboard'); }}
+              onBack={() => setActiveView('dashboard')}
+              isGoogleConnected={isGoogleConnected}
+            />
+          )}
         </div>
-        )}
 
         {/* Footer with Legal Links */}
         <footer className="mt-12 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">

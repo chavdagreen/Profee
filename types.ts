@@ -126,4 +126,4 @@ export interface LedgerEntry {
   balance: number;
 }
 
-export type View = 'dashboard' | 'clients' | 'proceedings' | 'billing';
+export type View = 'dashboard' | 'clients' | 'proceedings' | 'billing' | 'settings';

@@ -176,10 +176,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
         </div>
       </div>
       <div>
-        <p className="text-slate-400 dark:text-slate-500 font-bold text-[11px] mb-1">{title}</p>
+        <p className="text-slate-500 dark:text-slate-400 font-semibold text-xs mb-1">{title}</p>
         <div className="flex items-baseline gap-3">
           <h3 className="text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">{count}</h3>
-          <span className={`text-[10px] font-bold ${count > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-300'} bg-opacity-10 px-2 py-0.5 rounded-full`}>
+          <span className={`text-xs font-bold ${count > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-400'} px-2 py-0.5 rounded-full`}>
             {count > 0 ? 'Action Needed' : 'All Clear'}
           </span>
         </div>
@@ -193,12 +193,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
         <div>
           <h2 className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter leading-none mb-2">Practice Overview</h2>
-          <p className="text-slate-400 font-bold text-[11px]">Connected to Supabase DB & Google Cloud</p>
+          <p className="text-slate-500 font-semibold text-sm">Connected to Supabase DB & Google Cloud</p>
         </div>
         <div className="flex items-center gap-4">
-           <div className="clay-card px-6 py-3 border-none flex items-center gap-3 bg-white/80 backdrop-blur-md">
+           <div className="clay-card px-5 py-3 border-none flex items-center gap-3 bg-white/80 backdrop-blur-md">
              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-             <span className="text-[10px] font-bold text-slate-500">Live DB Sync</span>
+             <span className="text-xs font-semibold text-slate-600">Live DB Sync</span>
            </div>
            <button className="clay-button p-4 rounded-3xl relative"><Bell size={24}/><div className="absolute top-3 right-3 w-3 h-3 bg-rose-500 rounded-full border-4 border-indigo-600"></div></button>
         </div>
@@ -299,22 +299,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
         <button onClick={() => onNavigate('clients')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <UserCheck size={24} className="text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[11px] font-bold text-slate-400">Client Base</p>
+           <p className="text-xs font-semibold text-slate-500">Client Base</p>
            <h4 className="text-3xl font-black text-slate-800 dark:text-white">{clients.length}</h4>
         </button>
         <button onClick={() => onNavigate('proceedings')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <CalendarIcon size={24} className="text-indigo-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[11px] font-bold text-slate-400">Live Hearings</p>
+           <p className="text-xs font-semibold text-slate-500">Live Hearings</p>
            <h4 className="text-3xl font-black text-slate-800 dark:text-white">{hearings.length}</h4>
         </button>
         <button onClick={() => onNavigate('billing')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <TrendingUp size={24} className="text-emerald-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[11px] font-bold text-slate-400">Revenue</p>
+           <p className="text-xs font-semibold text-slate-500">Revenue</p>
            <h4 className="text-3xl font-black text-slate-800 dark:text-white">₹{invoices.reduce((s, i) => s + (i.total || 0), 0).toLocaleString()}</h4>
         </button>
         <button onClick={() => onNavigate('billing')} className="clay-card p-6 border-none text-left transition-all hover:scale-105 group">
            <AlertCircle size={24} className="text-amber-500 mb-4 group-hover:scale-110 transition-transform" />
-           <p className="text-[11px] font-bold text-slate-400">Outstandings</p>
+           <p className="text-xs font-semibold text-slate-500">Outstandings</p>
            <h4 className="text-3xl font-black text-slate-800 dark:text-white">₹{invoices.filter(i => i.status === 'Unpaid').reduce((s, i) => s + (i.total || 0), 0).toLocaleString()}</h4>
         </button>
       </div>
@@ -359,9 +359,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
 
           {/* Forum Legend */}
           <div className="flex items-center gap-6 mb-6">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-[10px] font-bold text-slate-400">AO</span></div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-500"></div><span className="text-[10px] font-bold text-slate-400">CIT(A)</span></div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500"></div><span className="text-[10px] font-bold text-slate-400">ITAT</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-xs font-semibold text-slate-500">AO</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-500"></div><span className="text-xs font-semibold text-slate-500">CIT(A)</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500"></div><span className="text-xs font-semibold text-slate-500">ITAT</span></div>
           </div>
 
           <div className="grid grid-cols-7 gap-4">

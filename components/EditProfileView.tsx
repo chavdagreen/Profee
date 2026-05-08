@@ -121,7 +121,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
           </h3>
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400">Practice / Firm Name</label>
+              <label className="text-xs font-semibold text-slate-500">Practice / Firm Name</label>
               <input
                 className="clay-input w-full p-4 font-bold text-lg"
                 placeholder="e.g. ABC & Associates"
@@ -130,7 +130,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400">Office Address</label>
+              <label className="text-xs font-semibold text-slate-500">Office Address</label>
               <textarea
                 className="clay-input w-full p-4 font-bold"
                 rows={3}
@@ -141,7 +141,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">PAN Number</label>
+                <label className="text-xs font-semibold text-slate-500">PAN Number</label>
                 <input
                   className="clay-input w-full p-4 font-bold uppercase"
                   placeholder="ABCDE1234F"
@@ -151,7 +151,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">GSTIN (if applicable)</label>
+                <label className="text-xs font-semibold text-slate-500">GSTIN (if applicable)</label>
                 <input
                   className="clay-input w-full p-4 font-bold uppercase"
                   placeholder="22AAAAA0000A1Z5"
@@ -166,7 +166,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
               <h4 className="text-sm font-black text-slate-600 dark:text-slate-300 mb-4">Invoice Settings</h4>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400">Invoice Prefix</label>
+                  <label className="text-xs font-semibold text-slate-500">Invoice Prefix</label>
                   <input
                     className="clay-input w-full p-4 font-bold"
                     value={form.prefix}
@@ -174,7 +174,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400">Last Invoice Number</label>
+                  <label className="text-xs font-semibold text-slate-500">Last Invoice Number</label>
                   <input
                     type="number"
                     className="clay-input w-full p-4 font-bold"
@@ -187,7 +187,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-between">
                   <div>
                     <p className="font-bold text-sm">GST Applicable</p>
-                    <p className="text-[9px] text-slate-400">Show GST columns in invoices</p>
+                    <p className="text-xs text-slate-400">Show GST columns in invoices</p>
                   </div>
                   <button
                     onClick={() => setForm({ ...form, isGstApplicable: !form.isGstApplicable })}
@@ -199,7 +199,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-between">
                   <div>
                     <p className="font-bold text-sm">Auto-Numbering</p>
-                    <p className="text-[9px] text-slate-400">Auto-increment invoice numbers</p>
+                    <p className="text-xs text-slate-400">Auto-increment invoice numbers</p>
                   </div>
                   <button
                     onClick={() => setForm({ ...form, isAutoNumbering: !form.isAutoNumbering })}
@@ -238,7 +238,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Account Holder Name</label>
+                <label className="text-xs font-semibold text-slate-500">Account Holder Name</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="Name as per bank"
@@ -247,7 +247,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Bank Name</label>
+                <label className="text-xs font-semibold text-slate-500">Bank Name</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="e.g. State Bank of India"
@@ -258,7 +258,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Account Number</label>
+                <label className="text-xs font-semibold text-slate-500">Account Number</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="Account number"
@@ -267,7 +267,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">IFSC Code</label>
+                <label className="text-xs font-semibold text-slate-500">IFSC Code</label>
                 <input
                   className="clay-input w-full p-4 font-bold uppercase"
                   placeholder="e.g. SBIN0001234"
@@ -278,7 +278,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Account Type</label>
+                <label className="text-xs font-semibold text-slate-500">Account Type</label>
                 <select
                   className="clay-input w-full p-4 font-bold"
                   value={form.accountType}
@@ -289,7 +289,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">UPI ID (for QR code on invoices)</label>
+                <label className="text-xs font-semibold text-slate-500">UPI ID (for QR code on invoices)</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="yourname@upi"
