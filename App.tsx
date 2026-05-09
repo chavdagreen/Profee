@@ -470,6 +470,7 @@ const App: React.FC = () => {
             onSave={(updated) => handleSetBillingSettings(updated)}
             onBack={() => setShowEditProfile(false)}
             isGoogleConnected={isGoogleConnected}
+            user={user}
           />
         ) : (
         <div key={activeView} className="animate-in fade-in slide-in-from-bottom-6 duration-500">

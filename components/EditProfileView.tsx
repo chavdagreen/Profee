@@ -1,20 +1,28 @@
 
 import React, { useState } from 'react';
 import { BillingSettings } from '../types';
-import { ChevronLeft, Building2, Landmark, Calendar, Save, CheckCircle, Link2 } from 'lucide-react';
+import { ChevronLeft, Building2, Landmark, Calendar, Save, CheckCircle, Link2, User, Phone, Mail } from 'lucide-react';
 import { signInWithGoogle } from '../services/database';
+import { updateProfile } from 'firebase/auth';
+import { auth } from '../services/firebase';
 
 interface EditProfileViewProps {
   settings: BillingSettings;
   onSave: (settings: BillingSettings) => void;
   onBack: () => void;
   isGoogleConnected: boolean;
+  user?: any;
 }
 
-const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onBack, isGoogleConnected }) => {
-  const [activeTab, setActiveTab] = useState<'practice' | 'bank' | 'calendar'>('practice');
+const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onBack, isGoogleConnected, user }) => {
+  const [activeTab, setActiveTab] = useState<'personal' | 'practice' | 'bank' | 'calendar'>('personal');
   const [saved, setSaved] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [personalForm, setPersonalForm] = useState({
+    displayName: user?.displayName || '',
+    phone: user?.phoneNumber || '',
+    email: user?.email || '',
+  });
   const [form, setForm] = useState({
     practiceName: settings.practiceName || '',
     address: settings.address || '',
@@ -33,7 +41,15 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
     lastNumber: settings.lastNumber || 0,
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Update Firebase auth display name if changed
+    if (auth.currentUser && personalForm.displayName && personalForm.displayName !== user?.displayName) {
+      try {
+        await updateProfile(auth.currentUser, { displayName: personalForm.displayName });
+      } catch (err) {
+        console.error('Failed to update display name:', err);
+      }
+    }
     const updatedSettings: BillingSettings = {
       ...settings,
       practiceName: form.practiceName || 'My Practice',
@@ -92,26 +108,80 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-fit">
-        <button
-          onClick={() => setActiveTab('practice')}
-          className={`px-6 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'practice' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-md' : 'text-slate-500'}`}
-        >
-          <Building2 size={16} /> Practice Details
-        </button>
-        <button
-          onClick={() => setActiveTab('bank')}
-          className={`px-6 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'bank' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-md' : 'text-slate-500'}`}
-        >
-          <Landmark size={16} /> Bank Details
-        </button>
-        <button
-          onClick={() => setActiveTab('calendar')}
-          className={`px-6 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'calendar' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-md' : 'text-slate-500'}`}
-        >
-          <Calendar size={16} /> Calendar Sync
-        </button>
+      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-fit gap-1">
+        {([
+          { key: 'personal', label: 'Personal Info', icon: <User size={16} /> },
+          { key: 'practice', label: 'Practice Details', icon: <Building2 size={16} /> },
+          { key: 'bank', label: 'Bank Details', icon: <Landmark size={16} /> },
+          { key: 'calendar', label: 'Calendar Sync', icon: <Calendar size={16} /> },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-md' : 'text-slate-500'}`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Personal Info Tab */}
+      {activeTab === 'personal' && (
+        <div className="clay-card p-10 bg-white dark:bg-slate-800 border-none shadow-2xl animate-in slide-in-from-right-4">
+          <h3 className="text-xl font-black text-slate-800 dark:text-white mb-8 flex items-center gap-3">
+            <User className="text-indigo-600" /> Personal Information
+          </h3>
+          <div className="space-y-6">
+            {/* Avatar */}
+            <div className="flex items-center gap-6 p-6 bg-slate-50 dark:bg-slate-700 rounded-2xl">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-black shadow-lg flex-shrink-0">
+                {(personalForm.displayName?.[0] || personalForm.email?.[0] || 'U').toUpperCase()}
+              </div>
+              <div>
+                <p className="font-black text-slate-800 dark:text-white text-lg">{personalForm.displayName || 'Your Name'}</p>
+                <p className="text-sm text-slate-400 mt-1">{personalForm.email}</p>
+                <p className="text-xs text-indigo-500 mt-2 font-bold">{isGoogleConnected ? 'Google Account' : 'Email Account'}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 flex items-center gap-2"><User size={14} /> Display Name</label>
+              <input
+                className="clay-input w-full p-4 font-bold text-lg"
+                placeholder="Your full name"
+                value={personalForm.displayName}
+                onChange={e => setPersonalForm({ ...personalForm, displayName: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 flex items-center gap-2"><Mail size={14} /> Email Address</label>
+                <input
+                  className="clay-input w-full p-4 font-bold bg-slate-50 cursor-not-allowed opacity-60"
+                  value={personalForm.email}
+                  readOnly
+                  disabled
+                />
+                <p className="text-xs text-slate-400">Email cannot be changed here.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 flex items-center gap-2"><Phone size={14} /> Phone Number</label>
+                <input
+                  className="clay-input w-full p-4 font-bold"
+                  placeholder="+91 98765 43210"
+                  value={personalForm.phone}
+                  onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
+              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-bold">Your display name will appear in documents and reports generated from Profee.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Practice Details Tab */}
       {activeTab === 'practice' && (
@@ -121,7 +191,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
           </h3>
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400">Practice / Firm Name</label>
+              <label className="text-xs font-bold text-slate-500">Practice / Firm Name</label>
               <input
                 className="clay-input w-full p-4 font-bold text-lg"
                 placeholder="e.g. ABC & Associates"
@@ -130,7 +200,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400">Office Address</label>
+              <label className="text-xs font-bold text-slate-500">Office Address</label>
               <textarea
                 className="clay-input w-full p-4 font-bold"
                 rows={3}
@@ -141,7 +211,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">PAN Number</label>
+                <label className="text-xs font-bold text-slate-500">PAN Number</label>
                 <input
                   className="clay-input w-full p-4 font-bold uppercase"
                   placeholder="ABCDE1234F"
@@ -151,7 +221,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">GSTIN (if applicable)</label>
+                <label className="text-xs font-bold text-slate-500">GSTIN (if applicable)</label>
                 <input
                   className="clay-input w-full p-4 font-bold uppercase"
                   placeholder="22AAAAA0000A1Z5"
@@ -166,7 +236,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
               <h4 className="text-sm font-black text-slate-600 dark:text-slate-300 mb-4">Invoice Settings</h4>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400">Invoice Prefix</label>
+                  <label className="text-xs font-bold text-slate-500">Invoice Prefix</label>
                   <input
                     className="clay-input w-full p-4 font-bold"
                     value={form.prefix}
@@ -174,7 +244,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400">Last Invoice Number</label>
+                  <label className="text-xs font-bold text-slate-500">Last Invoice Number</label>
                   <input
                     type="number"
                     className="clay-input w-full p-4 font-bold"
@@ -187,7 +257,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-between">
                   <div>
                     <p className="font-bold text-sm">GST Applicable</p>
-                    <p className="text-[9px] text-slate-400">Show GST columns in invoices</p>
+                    <p className="text-xs text-slate-400">Show GST columns in invoices</p>
                   </div>
                   <button
                     onClick={() => setForm({ ...form, isGstApplicable: !form.isGstApplicable })}
@@ -199,7 +269,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-between">
                   <div>
                     <p className="font-bold text-sm">Auto-Numbering</p>
-                    <p className="text-[9px] text-slate-400">Auto-increment invoice numbers</p>
+                    <p className="text-xs text-slate-400">Auto-increment invoice numbers</p>
                   </div>
                   <button
                     onClick={() => setForm({ ...form, isAutoNumbering: !form.isAutoNumbering })}
@@ -212,7 +282,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
 
             <div className="pt-6 border-t">
-              <label className="text-[10px] font-bold text-slate-400 mb-3 block">Brand Theme Color</label>
+              <label className="text-xs font-bold text-slate-500 mb-3 block">Brand Theme Color</label>
               <div className="flex gap-4">
                 {['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#0f172a', '#7c3aed', '#db2777'].map(c => (
                   <button
@@ -238,7 +308,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Account Holder Name</label>
+                <label className="text-xs font-bold text-slate-500">Account Holder Name</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="Name as per bank"
@@ -247,7 +317,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Bank Name</label>
+                <label className="text-xs font-bold text-slate-500">Bank Name</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="e.g. State Bank of India"
@@ -258,7 +328,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Account Number</label>
+                <label className="text-xs font-bold text-slate-500">Account Number</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="Account number"
@@ -267,7 +337,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">IFSC Code</label>
+                <label className="text-xs font-bold text-slate-500">IFSC Code</label>
                 <input
                   className="clay-input w-full p-4 font-bold uppercase"
                   placeholder="e.g. SBIN0001234"
@@ -278,7 +348,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">Account Type</label>
+                <label className="text-xs font-bold text-slate-500">Account Type</label>
                 <select
                   className="clay-input w-full p-4 font-bold"
                   value={form.accountType}
@@ -289,7 +359,7 @@ const EditProfileView: React.FC<EditProfileViewProps> = ({ settings, onSave, onB
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400">UPI ID (for QR code on invoices)</label>
+                <label className="text-xs font-bold text-slate-500">UPI ID (for QR code on invoices)</label>
                 <input
                   className="clay-input w-full p-4 font-bold"
                   placeholder="yourname@upi"
