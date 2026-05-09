@@ -1,22 +1,14 @@
 import { jsPDF } from 'jspdf';
-import { Invoice, Receipt, BillingSettings } from '../types';
+import html2canvas from 'html2canvas';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const FONT = 'helvetica';
-const PRIMARY = [79, 70, 229] as const;   // indigo-600
 const SLATE8 = [30, 41, 59] as const;
 const SLATE5 = [100, 116, 139] as const;
 const SLATE3 = [203, 213, 225] as const;
 const WHITE = [255, 255, 255] as const;
 const LIGHT_BG = [248, 250, 252] as const;
-
-function hexToRgb(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [79, 70, 229];
-}
 
 function setFillColor(pdf: jsPDF, color: readonly [number, number, number] | [number, number, number]) {
   pdf.setFillColor(color[0], color[1], color[2]);
@@ -31,20 +23,6 @@ function setDrawColor(pdf: jsPDF, color: readonly [number, number, number] | [nu
 function wrapText(pdf: jsPDF, text: string, maxWidth: number): string[] {
   return pdf.splitTextToSize(text, maxWidth);
 }
-
-const numberToWords = (num: number): string => {
-  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
-  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  const format = (n: number): string => {
-    if (n < 20) return a[n];
-    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
-    if (n < 1000) return a[Math.floor(n / 100)] + 'Hundred ' + (n % 100 !== 0 ? 'And ' + format(n % 100) : '');
-    if (n < 100000) return format(Math.floor(n / 1000)) + 'Thousand ' + (n % 1000 !== 0 ? format(n % 1000) : '');
-    if (n < 10000000) return format(Math.floor(n / 100000)) + 'Lakh ' + (n % 100000 !== 0 ? format(n % 100000) : '');
-    return n.toString();
-  };
-  return format(Math.floor(num)).trim() + ' Rupees Only';
-};
 
 function inrFormat(n: number): string {
   return '₹' + (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -62,483 +40,115 @@ function addWatermark(pdf: jsPDF) {
   }
 }
 
-// ─── Invoice PDF ─────────────────────────────────────────────────────────────
+// Wait for all images inside an element to finish loading
+async function waitForImages(el: HTMLElement): Promise<void> {
+  const imgs = Array.from(el.querySelectorAll('img'));
+  await Promise.all(
+    imgs.map(img =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>(res => {
+            img.onload = () => res();
+            img.onerror = () => res();
+          })
+    )
+  );
+}
 
-export function generateInvoicePDF(invoice: Invoice, settings: BillingSettings): void {
+// ─── Capture-based PDF (Invoice & Receipt) ───────────────────────────────────
+// Captures the on-screen React template at 3× resolution so the PDF matches
+// the UI design exactly, then embeds it into an A4 PDF.
+
+async function captureElementToPDF(
+  elementId: string,
+  filename: string,
+  marginMm = 8,
+): Promise<void> {
+  const el = document.getElementById(elementId);
+  if (!el) throw new Error(`Element #${elementId} not found`);
+
+  // Wait for any images (e.g. QR code) to fully load
+  await waitForImages(el as HTMLElement);
+
+  // Small delay so fonts / layout settle
+  await new Promise(r => setTimeout(r, 150));
+
+  const canvas = await html2canvas(el as HTMLElement, {
+    scale: 3,                      // 3× = ~216 DPI on screen → sharp on print
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    imageTimeout: 20000,
+    onclone: (_doc: Document, cloned: HTMLElement) => {
+      // Remove shadows & decorative borders so nothing clips during capture
+      cloned.style.boxShadow = 'none';
+      cloned.style.border = 'none';
+      cloned.style.borderRadius = '0';
+      cloned.querySelectorAll<HTMLElement>('[class*="shadow"]').forEach(n => {
+        n.style.boxShadow = 'none';
+      });
+      // Keep rounded corners on inner elements (table header, boxes etc.) intact
+    },
+  });
+
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const W = 210;
-  const margin = 14;
-  const contentW = W - margin * 2;
-  const themeRgb = hexToRgb(invoice.themeColor || settings.themeColor || '#4f46e5');
-  let y = 0;
+  const pageW = 210;
+  const pageH = 297;
+  const usableW = pageW - marginMm * 2;
+  const usableH = pageH - marginMm * 2;
+  const imgH = (canvas.height * usableW) / canvas.width;
 
-  // ── Header banner ──
-  setFillColor(pdf, themeRgb);
-  pdf.rect(0, 0, W, 38, 'F');
+  // Use JPEG at 0.95 quality — smaller file, still visually lossless
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(26);
-  setTextColor(pdf, WHITE);
-  pdf.text('INVOICE', margin, 22);
-
-  pdf.setFontSize(9);
-  pdf.setFont(FONT, 'normal');
-  pdf.text(settings.practiceName.toUpperCase(), W - margin, 14, { align: 'right' });
-  pdf.text('Tax Professionals & Consultants', W - margin, 20, { align: 'right' });
-
-  y = 46;
-
-  // ── Invoice meta row ──
-  const metaFields = [
-    ['Invoice No.', invoice.invoiceNumber || '—'],
-    ['Invoice Date', invoice.date ? new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'],
-    ['Due Date', invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'],
-    ['Status', invoice.status || 'Unpaid'],
-  ];
-  const metaColW = contentW / metaFields.length;
-  setFillColor(pdf, LIGHT_BG);
-  pdf.rect(margin, y - 4, contentW, 16, 'F');
-  metaFields.forEach(([label, val], i) => {
-    const x = margin + i * metaColW + 3;
-    pdf.setFont(FONT, 'normal');
-    pdf.setFontSize(7);
-    setTextColor(pdf, SLATE5);
-    pdf.text(label.toUpperCase(), x, y + 1);
-    pdf.setFont(FONT, 'bold');
-    pdf.setFontSize(9);
-    setTextColor(pdf, SLATE8);
-    pdf.text(val, x, y + 7);
-  });
-  y += 20;
-
-  // ── Billed By / Billed To ──
-  const halfW = (contentW - 6) / 2;
-  const boxH = 38;
-
-  const drawInfoBox = (bx: number, by: number, title: string, name: string, address: string, gstin: string, pan: string, titleColor: readonly [number, number, number]) => {
-    setFillColor(pdf, LIGHT_BG);
-    setDrawColor(pdf, SLATE3);
-    pdf.setLineWidth(0.3);
-    pdf.rect(bx, by, halfW, boxH, 'FD');
-    pdf.setFont(FONT, 'bold');
-    pdf.setFontSize(7);
-    setTextColor(pdf, titleColor);
-    pdf.text(title.toUpperCase(), bx + 4, by + 6);
-    pdf.setFont(FONT, 'bold');
-    pdf.setFontSize(10);
-    setTextColor(pdf, SLATE8);
-    pdf.text(name.toUpperCase().slice(0, 35), bx + 4, by + 13);
-    pdf.setFont(FONT, 'normal');
-    pdf.setFontSize(8);
-    setTextColor(pdf, SLATE5);
-    const addrLines = wrapText(pdf, address || '', halfW - 8);
-    addrLines.slice(0, 2).forEach((line, li) => pdf.text(line, bx + 4, by + 19 + li * 4));
-    pdf.setFont(FONT, 'bold');
-    pdf.setFontSize(7.5);
-    setTextColor(pdf, SLATE5);
-    pdf.text(`GSTIN: ${gstin || 'N/A'}`, bx + 4, by + 29);
-    pdf.text(`PAN: ${pan || 'N/A'}`, bx + 4, by + 34);
-  };
-
-  drawInfoBox(margin, y, 'Billed By', settings.practiceName, settings.address, settings.gstin, settings.pan, themeRgb);
-  drawInfoBox(margin + halfW + 6, y, 'Billed To', invoice.clientName, invoice.clientAddress || 'Address on file', invoice.clientGstin || 'URD', invoice.clientPan || 'NA', SLATE5);
-  y += boxH + 8;
-
-  // ── Place of supply bar ──
-  setFillColor(pdf, LIGHT_BG);
-  pdf.rect(margin, y, contentW, 8, 'F');
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text(`Place of Supply: ${invoice.placeOfSupply || '—'}`, margin + 4, y + 5);
-  pdf.text(`Country: ${invoice.countryOfSupply || 'India'}`, W - margin - 4, y + 5, { align: 'right' });
-  y += 14;
-
-  // ── Items table ──
-  const hasGst = settings.isGstApplicable;
-  // Col widths depend on GST mode
-  // Cols: #, Description, HSN, Qty, Rate, [GST%], [SGST], [CGST], Amount
-  const cols = hasGst
-    ? [8, 60, 16, 10, 22, 12, 18, 18, 18]
-    : [8, 90, 16, 14, 30, 24];
-  const headers = hasGst
-    ? ['#', 'Service Description', 'HSN', 'Qty', 'Rate (₹)', 'GST%', 'SGST (₹)', 'CGST (₹)', 'Amount (₹)']
-    : ['#', 'Service Description', 'HSN', 'Qty', 'Rate (₹)', 'Amount (₹)'];
-  const colAligns: ('left' | 'right' | 'center')[] = hasGst
-    ? ['center', 'left', 'center', 'center', 'right', 'center', 'right', 'right', 'right']
-    : ['center', 'left', 'center', 'center', 'right', 'right'];
-
-  // Header row
-  setFillColor(pdf, themeRgb);
-  pdf.rect(margin, y, contentW, 8, 'F');
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, WHITE);
-  let cx = margin;
-  headers.forEach((h, i) => {
-    const align = colAligns[i];
-    const cellX = align === 'right' ? cx + cols[i] - 2 : align === 'center' ? cx + cols[i] / 2 : cx + 2;
-    pdf.text(h, cellX, y + 5.5, { align });
-    cx += cols[i];
-  });
-  y += 8;
-
-  // Data rows
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(8);
-  const items = invoice.items || [];
-  items.forEach((item, idx) => {
-    const taxable = item.qty * item.rate * (1 - (invoice.discountPercent || 0) / 100);
-    const tax = taxable * (item.gstPercent / 100);
-    const rowAmount = taxable + tax;
-    const descLines = wrapText(pdf, item.description || '', cols[1] - 4);
-    const subLines = item.subNotes ? wrapText(pdf, item.subNotes, cols[1] - 4) : [];
-    const totalLines = descLines.length + (subLines.length > 0 ? subLines.length + 0.5 : 0);
-    const rowH = Math.max(8, totalLines * 4.5 + 4);
-
-    if (y + rowH > 270) {
-      pdf.addPage();
-      y = 20;
+  if (imgH <= usableH) {
+    // Fits on one page
+    pdf.addImage(imgData, 'JPEG', marginMm, marginMm, usableW, imgH);
+  } else {
+    // Multi-page: slice the canvas into page-height chunks
+    let remainingH = imgH;
+    let pageTop = 0;
+    while (remainingH > 0) {
+      if (pageTop > 0) pdf.addPage();
+      // Position image so the correct slice falls in the visible area
+      pdf.addImage(imgData, 'JPEG', marginMm, marginMm - pageTop, usableW, imgH);
+      pageTop += usableH;
+      remainingH -= usableH;
     }
-
-    const rowBg: [number, number, number] = idx % 2 === 0 ? [255, 255, 255] : [249, 250, 251];
-    setFillColor(pdf, rowBg);
-    pdf.rect(margin, y, contentW, rowH, 'F');
-
-    // Thin bottom border
-    setDrawColor(pdf, SLATE3);
-    pdf.setLineWidth(0.2);
-    pdf.line(margin, y + rowH, margin + contentW, y + rowH);
-
-    setTextColor(pdf, SLATE8);
-    cx = margin;
-    const values = hasGst
-      ? [
-          String(idx + 1),
-          '',  // description handled separately
-          item.hsn || '',
-          String(item.qty),
-          inrFormat(item.rate),
-          `${item.gstPercent}%`,
-          inrFormat(tax / 2),
-          inrFormat(tax / 2),
-          inrFormat(rowAmount),
-        ]
-      : [
-          String(idx + 1),
-          '',
-          item.hsn || '',
-          String(item.qty),
-          inrFormat(item.rate),
-          inrFormat(taxable),
-        ];
-
-    values.forEach((val, i) => {
-      if (i === 1) {
-        // Description column - render multi-line
-        pdf.setFont(FONT, 'bold');
-        pdf.setFontSize(8);
-        setTextColor(pdf, SLATE8);
-        descLines.forEach((line, li) => pdf.text(line, cx + 2, y + 5 + li * 4.5));
-        if (subLines.length > 0) {
-          pdf.setFont(FONT, 'normal');
-          pdf.setFontSize(7);
-          setTextColor(pdf, SLATE5);
-          subLines.forEach((line, li) => pdf.text(line, cx + 2, y + 5 + descLines.length * 4.5 + 2 + li * 4));
-        }
-        pdf.setFont(FONT, 'normal');
-        pdf.setFontSize(8);
-        setTextColor(pdf, SLATE8);
-      } else {
-        const align = colAligns[i];
-        const cellX = align === 'right' ? cx + cols[i] - 2 : align === 'center' ? cx + cols[i] / 2 : cx + 2;
-        pdf.text(val, cellX, y + rowH / 2 + 1.5, { align });
-      }
-      cx += cols[i];
-    });
-    y += rowH;
-  });
-
-  y += 6;
-
-  // ── Totals + Bank details ──
-  const totalsX = margin + contentW * 0.55;
-  const totalsW = contentW * 0.45;
-  const bankX = margin;
-  const bankW = contentW * 0.5;
-
-  if (y + 60 > 270) { pdf.addPage(); y = 20; }
-
-  // Bank details section
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(8);
-  setTextColor(pdf, themeRgb);
-  pdf.text('BANK & PAYMENT DETAILS', bankX, y);
-  setDrawColor(pdf, themeRgb);
-  pdf.setLineWidth(0.5);
-  pdf.line(bankX, y + 1, bankX + 60, y + 1);
-  y += 5;
-
-  const bankFields: [string, string][] = [
-    ['Account Holder', settings.bankDetails.accountHolder],
-    ['Account No.', settings.bankDetails.accountNumber],
-    ['IFSC Code', settings.bankDetails.ifsc],
-    ['Bank', settings.bankDetails.bankName],
-    ['Account Type', settings.bankDetails.accountType],
-    ['UPI ID', settings.bankDetails.upiId],
-  ];
-
-  const bankStartY = y;
-  bankFields.forEach(([label, val], i) => {
-    pdf.setFont(FONT, 'bold');
-    pdf.setFontSize(7);
-    setTextColor(pdf, SLATE5);
-    pdf.text(label + ':', bankX, y + i * 5);
-    pdf.setFont(FONT, 'normal');
-    setTextColor(pdf, SLATE8);
-    pdf.text(val || '—', bankX + 28, y + i * 5);
-  });
-
-  const bankEndY = bankStartY + bankFields.length * 5 + 8;
-
-  // Totals section
-  const totalsStartY = bankStartY - 5;
-  const totalRows: [string, string, boolean][] = [
-    ['Sub Total', inrFormat(invoice.subTotal || 0), false],
-    [`Discount (${invoice.discountPercent || 0}%)`, `- ${inrFormat(invoice.discountAmount || 0)}`, false],
-    ['Taxable Amount', inrFormat(invoice.taxableAmount || 0), false],
-    ...(hasGst ? [
-      ['CGST', inrFormat(invoice.cgstTotal || 0), false] as [string, string, boolean],
-      ['SGST', inrFormat(invoice.sgstTotal || 0), false] as [string, string, boolean],
-    ] : []),
-  ];
-
-  let ty = totalsStartY;
-  totalRows.forEach(([label, val]) => {
-    pdf.setFont(FONT, 'normal');
-    pdf.setFontSize(8.5);
-    setTextColor(pdf, SLATE5);
-    pdf.text(label, totalsX + 2, ty);
-    setTextColor(pdf, SLATE8);
-    pdf.text(val, totalsX + totalsW - 2, ty, { align: 'right' });
-    ty += 6;
-  });
-
-  // Total row
-  setFillColor(pdf, themeRgb);
-  pdf.rect(totalsX, ty - 1, totalsW, 10, 'F');
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(11);
-  setTextColor(pdf, WHITE);
-  pdf.text('TOTAL', totalsX + 4, ty + 6);
-  pdf.text(inrFormat(invoice.total || 0), totalsX + totalsW - 4, ty + 6, { align: 'right' });
-  ty += 15;
-
-  // Amount in words
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(7);
-  setTextColor(pdf, SLATE5);
-  pdf.text('AMOUNT IN WORDS:', totalsX + 2, ty);
-  pdf.setFont(FONT, 'normal');
-  setTextColor(pdf, SLATE8);
-  const wordsLines = wrapText(pdf, numberToWords(invoice.total || 0), totalsW - 4);
-  wordsLines.forEach((line, i) => pdf.text(line, totalsX + 2, ty + 4 + i * 4));
-
-  y = Math.max(bankEndY, ty + wordsLines.length * 4 + 8);
-
-  // ── Terms & Notes ──
-  if (y + 30 > 270) { pdf.addPage(); y = 20; }
-
-  // Divider
-  setDrawColor(pdf, SLATE3);
-  pdf.setLineWidth(0.3);
-  pdf.line(margin, y, margin + contentW, y);
-  y += 6;
-
-  const termsX = margin;
-  const notesX = margin + contentW * 0.55;
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('TERMS & CONDITIONS', termsX, y);
-  pdf.text('NOTES', notesX, y);
-  y += 4;
-
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE8);
-  (settings.terms || []).forEach((term, i) => {
-    const lines = wrapText(pdf, `${i + 1}. ${term}`, contentW * 0.5 - 4);
-    lines.forEach((line, li) => pdf.text(line, termsX, y + i * 8 + li * 4));
-  });
-
-  if (invoice.notes) {
-    const noteLines = wrapText(pdf, invoice.notes, contentW * 0.4);
-    noteLines.forEach((line, li) => pdf.text(line, notesX, y + li * 4));
   }
 
-  y += Math.max((settings.terms || []).length * 8, 20) + 6;
-
-  // ── Signature ──
-  if (y + 20 > 275) { pdf.addPage(); y = 20; }
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('Authorized Signatory', W - margin - 4, y, { align: 'right' });
-  setDrawColor(pdf, SLATE3);
-  pdf.setLineWidth(0.4);
-  pdf.line(W - margin - 50, y + 14, W - margin, y + 14);
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(8);
-  setTextColor(pdf, SLATE8);
-  pdf.text(settings.practiceName, W - margin - 4, y + 20, { align: 'right' });
-
   addWatermark(pdf);
-  pdf.save(`${invoice.invoiceNumber || 'Invoice'}.pdf`);
+  pdf.save(filename);
 }
 
-// ─── Receipt PDF ──────────────────────────────────────────────────────────────
-
-export function generateReceiptPDF(receipt: Receipt, settings: BillingSettings): void {
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const W = 210;
-  const margin = 20;
-  const contentW = W - margin * 2;
-  let y = 0;
-
-  // Green header banner
-  const GREEN: [number, number, number] = [5, 150, 105];
-  setFillColor(pdf, GREEN);
-  pdf.rect(0, 0, W, 42, 'F');
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(22);
-  setTextColor(pdf, WHITE);
-  pdf.text('PAYMENT RECEIPT', margin, 20);
-
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(9);
-  pdf.text('Official Confirmation of Payment', margin, 28);
-
-  // Practice name top-right
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(10);
-  pdf.text(settings.practiceName.toUpperCase(), W - margin, 18, { align: 'right' });
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(8);
-  pdf.text(`Ref: ${receipt.receiptNumber}`, W - margin, 26, { align: 'right' });
-
-  y = 54;
-
-  // ── Receipt info box ──
-  setFillColor(pdf, LIGHT_BG);
-  setDrawColor(pdf, SLATE3);
-  pdf.setLineWidth(0.3);
-  pdf.rect(margin, y, contentW, 55, 'FD');
-
-  // Received from + Date
-  const col1X = margin + 8;
-  const col2X = margin + contentW / 2 + 4;
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('RECEIVED FROM', col1X, y + 8);
-  pdf.text('PAYMENT DATE', col2X, y + 8);
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(14);
-  setTextColor(pdf, SLATE8);
-  pdf.text(receipt.clientName || '—', col1X, y + 17);
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(12);
-  const dateStr = receipt.date
-    ? new Date(receipt.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '—';
-  pdf.text(dateStr.toUpperCase(), col2X, y + 17);
-
-  // Divider
-  setDrawColor(pdf, SLATE3);
-  pdf.setLineWidth(0.3);
-  pdf.line(margin + 4, y + 24, margin + contentW - 4, y + 24);
-
-  // Mode + Reference
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('MODE OF PAYMENT', col1X, y + 32);
-  pdf.text('TRANSACTION REF.', col2X, y + 32);
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(11);
-  setTextColor(pdf, SLATE8);
-  pdf.text(receipt.paymentMethod || '—', col1X, y + 40);
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(10);
-  pdf.text(receipt.reference || 'SYSTEM RECORD', col2X, y + 40);
-
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('For internal use only', col1X, y + 50);
-
-  y += 63;
-
-  // ── Amount box ──
-  setFillColor(pdf, GREEN);
-  pdf.rect(margin, y, contentW, 28, 'F');
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(9);
-  setTextColor(pdf, [255, 255, 255]);
-  pdf.text('AMOUNT RECEIVED', margin + 8, y + 9);
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(28);
-  pdf.text(inrFormat(receipt.amount || 0), margin + 8, y + 22);
-  y += 36;
-
-  // ── Amount in words + Signature ──
-  y += 8;
-  const wordsCol = margin;
-  const sigCol = margin + contentW / 2;
-
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('AMOUNT IN WORDS', wordsCol, y);
-  pdf.text('AUTHORIZED BY', sigCol, y);
-
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(9);
-  setTextColor(pdf, SLATE8);
-  const words = numberToWords(receipt.amount || 0);
-  const wordLines = wrapText(pdf, words, contentW / 2 - 8);
-  wordLines.forEach((line, i) => pdf.text(line, wordsCol, y + 6 + i * 5));
-
-  setDrawColor(pdf, SLATE3);
-  pdf.setLineWidth(0.4);
-  pdf.line(sigCol, y + 24, sigCol + 60, y + 24);
-  pdf.setFont(FONT, 'bold');
-  pdf.setFontSize(9);
-  setTextColor(pdf, SLATE8);
-  pdf.text(settings.practiceName, sigCol, y + 30);
-
-  // ── Footer note ──
-  y = 270;
-  setDrawColor(pdf, SLATE3);
-  pdf.setLineWidth(0.3);
-  pdf.line(margin, y, margin + contentW, y);
-  pdf.setFont(FONT, 'normal');
-  pdf.setFontSize(7.5);
-  setTextColor(pdf, SLATE5);
-  pdf.text('This is a computer-generated receipt and is valid without a physical signature.', W / 2, y + 5, { align: 'center' });
-
-  addWatermark(pdf);
-  pdf.save(`${receipt.receiptNumber || 'Receipt'}.pdf`);
+export async function generateInvoicePDF(
+  invoiceNumber: string,
+): Promise<void> {
+  await captureElementToPDF('invoice-capture', `${invoiceNumber || 'Invoice'}.pdf`);
 }
 
-// ─── Ledger PDF ───────────────────────────────────────────────────────────────
+export async function generateReceiptPDF(
+  receiptNumber: string,
+): Promise<void> {
+  await captureElementToPDF('receipt-capture', `${receiptNumber || 'Receipt'}.pdf`, 6);
+}
+
+// ─── Ledger PDF (native jsPDF — no on-screen template to capture) ─────────────
+
+function numberToWords(num: number): string {
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const format = (n: number): string => {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+    if (n < 1000) return a[Math.floor(n / 100)] + 'Hundred ' + (n % 100 !== 0 ? 'And ' + format(n % 100) : '');
+    if (n < 100000) return format(Math.floor(n / 1000)) + 'Thousand ' + (n % 1000 !== 0 ? format(n % 1000) : '');
+    if (n < 10000000) return format(Math.floor(n / 100000)) + 'Lakh ' + (n % 100000 !== 0 ? format(n % 100000) : '');
+    return n.toString();
+  };
+  return format(Math.floor(num)).trim() + ' Rupees Only';
+}
 
 interface LedgerEntry {
   date: string;
@@ -565,7 +175,7 @@ export function generateClientLedgerPDF(
   const contentW = W - margin * 2;
   let y = 0;
 
-  // Header
+  // ── Header ──
   setFillColor(pdf, SLATE8);
   pdf.rect(0, 0, W, 32, 'F');
   pdf.setFont(FONT, 'bold');
@@ -579,7 +189,7 @@ export function generateClientLedgerPDF(
 
   y = 40;
 
-  // Client info row
+  // ── Client info row ──
   setFillColor(pdf, LIGHT_BG);
   pdf.rect(margin, y, contentW, 14, 'F');
   pdf.setFont(FONT, 'bold');
@@ -595,14 +205,14 @@ export function generateClientLedgerPDF(
   }
   y += 20;
 
-  // Table headers
-  const colWidths = [22, 28, 70, 26, 26, 10];  // Date, Ref, Description, Debit, Credit, unused
+  // ── Table header ──
+  const colWidths = [22, 28, 62, 28, 28, 14];
   const balW = 24;
-  const colXs = [margin];
+  const colXs: number[] = [margin];
   for (let i = 0; i < colWidths.length - 1; i++) colXs.push(colXs[i] + colWidths[i]);
   const balX = margin + contentW - balW;
 
-  setFillColor(pdf, [30, 41, 59]);
+  setFillColor(pdf, SLATE8);
   pdf.rect(margin, y, contentW, 8, 'F');
   pdf.setFont(FONT, 'bold');
   pdf.setFontSize(7.5);
@@ -617,13 +227,11 @@ export function generateClientLedgerPDF(
   });
   y += 8;
 
-  // Rows
+  // ── Rows ──
   pdf.setFontSize(8);
   entries.forEach((entry, idx) => {
-    if (y + 10 > 272) {
-      pdf.addPage();
-      y = 16;
-    }
+    if (y + 10 > 272) { pdf.addPage(); y = 16; }
+
     const rowBg: [number, number, number] = idx % 2 === 0 ? [255, 255, 255] : [249, 250, 251];
     setFillColor(pdf, rowBg);
     pdf.rect(margin, y, contentW, 9, 'F');
@@ -636,32 +244,25 @@ export function generateClientLedgerPDF(
     const balText = `${inrFormat(Math.abs(entry.balance))} ${entry.balance >= 0 ? 'Dr' : 'Cr'}`;
     const balColor: [number, number, number] = entry.balance >= 0 ? [225, 29, 72] : [5, 150, 105];
 
-    const rowVals = [entry.date, entry.ref || '—', entry.description];
     setTextColor(pdf, SLATE8);
     pdf.setFont(FONT, 'normal');
-    rowVals.forEach((val, i) => {
-      pdf.text(val.slice(0, i === 2 ? 38 : 18), colXs[i] + 2, y + 6);
+    [entry.date, entry.ref || '—', entry.description].forEach((val, i) => {
+      pdf.text(val.slice(0, i === 2 ? 36 : 18), colXs[i] + 2, y + 6);
     });
 
-    // Debit (rose)
     if (debit) {
       setTextColor(pdf, [225, 29, 72]);
       pdf.setFont(FONT, 'bold');
       pdf.text(debit, colXs[3] + colWidths[3] - 2, y + 6, { align: 'right' });
     }
-
-    // Credit (green)
     if (credit) {
       setTextColor(pdf, [5, 150, 105]);
       pdf.setFont(FONT, 'bold');
       pdf.text(credit, colXs[4] + colWidths[4] - 2, y + 6, { align: 'right' });
     }
-
-    // Balance
     setTextColor(pdf, balColor);
     pdf.setFont(FONT, 'bold');
     pdf.text(balText, balX + balW - 2, y + 6, { align: 'right' });
-
     y += 9;
   });
 
@@ -673,9 +274,9 @@ export function generateClientLedgerPDF(
     y += 20;
   }
 
-  // Summary footer
+  // ── Summary footer ──
   y += 6;
-  if (y + 20 > 272) { pdf.addPage(); y = 20; }
+  if (y + 22 > 272) { pdf.addPage(); y = 20; }
 
   setFillColor(pdf, LIGHT_BG);
   pdf.rect(margin, y, contentW, 22, 'F');
@@ -683,10 +284,10 @@ export function generateClientLedgerPDF(
   pdf.setLineWidth(0.4);
   pdf.rect(margin, y, contentW, 22);
 
-  const summaryData = [
-    ['Total Invoiced', inrFormat(totalInvoiced), [225, 29, 72] as [number, number, number]],
-    ['Total Received', inrFormat(totalReceived), [5, 150, 105] as [number, number, number]],
-    ['Outstanding', inrFormat(Math.abs(totalInvoiced - totalReceived)), (totalInvoiced >= totalReceived ? [225, 29, 72] : [5, 150, 105]) as [number, number, number]],
+  const summaryData: [string, string, [number, number, number]][] = [
+    ['Total Invoiced', inrFormat(totalInvoiced), [225, 29, 72]],
+    ['Total Received', inrFormat(totalReceived), [5, 150, 105]],
+    ['Outstanding', inrFormat(Math.abs(totalInvoiced - totalReceived)), totalInvoiced >= totalReceived ? [225, 29, 72] : [5, 150, 105]],
   ];
   const sumColW = contentW / 3;
   summaryData.forEach(([label, val, color], i) => {
@@ -694,11 +295,11 @@ export function generateClientLedgerPDF(
     pdf.setFont(FONT, 'normal');
     pdf.setFontSize(7.5);
     setTextColor(pdf, SLATE5);
-    pdf.text(label as string, sx, y + 7, { align: 'center' });
+    pdf.text(label, sx, y + 7, { align: 'center' });
     pdf.setFont(FONT, 'bold');
     pdf.setFontSize(13);
-    setTextColor(pdf, color as [number, number, number]);
-    pdf.text(val as string, sx, y + 17, { align: 'center' });
+    setTextColor(pdf, color);
+    pdf.text(val, sx, y + 17, { align: 'center' });
   });
 
   addWatermark(pdf);
@@ -731,8 +332,8 @@ export function generateGroupLedgerPDF(
 
   y = 42;
 
-  // Table headers
-  setFillColor(pdf, [30, 41, 59]);
+  // ── Table header ──
+  setFillColor(pdf, SLATE8);
   pdf.rect(margin, y, contentW, 8, 'F');
   pdf.setFont(FONT, 'bold');
   pdf.setFontSize(8);
@@ -764,17 +365,19 @@ export function generateGroupLedgerPDF(
     setTextColor(pdf, [5, 150, 105]);
     pdf.text(inrFormat(s.totalReceived), colXArr[2] + colW[2] - 2, y + 6, { align: 'right' });
     setTextColor(pdf, s.outstanding >= 0 ? [225, 29, 72] : [5, 150, 105]);
-    pdf.text(inrFormat(Math.abs(s.outstanding)) + (s.outstanding >= 0 ? ' Dr' : ' Cr'), colXArr[3] + colW[3] - 2, y + 6, { align: 'right' });
-
+    pdf.text(
+      inrFormat(Math.abs(s.outstanding)) + (s.outstanding >= 0 ? ' Dr' : ' Cr'),
+      colXArr[3] + colW[3] - 2, y + 6, { align: 'right' }
+    );
     grandInv += s.totalInvoiced;
     grandRec += s.totalReceived;
     y += 9;
   });
 
-  // Grand total row
+  // ── Grand total ──
   y += 2;
   if (y + 12 > 272) { pdf.addPage(); y = 16; }
-  setFillColor(pdf, [30, 41, 59]);
+  setFillColor(pdf, SLATE8);
   pdf.rect(margin, y, contentW, 11, 'F');
   pdf.setFont(FONT, 'bold');
   pdf.setFontSize(9);
@@ -783,7 +386,10 @@ export function generateGroupLedgerPDF(
   pdf.text(inrFormat(grandInv), colXArr[1] + colW[1] - 2, y + 7.5, { align: 'right' });
   pdf.text(inrFormat(grandRec), colXArr[2] + colW[2] - 2, y + 7.5, { align: 'right' });
   const grandOut = grandInv - grandRec;
-  pdf.text(inrFormat(Math.abs(grandOut)) + (grandOut >= 0 ? ' Dr' : ' Cr'), colXArr[3] + colW[3] - 2, y + 7.5, { align: 'right' });
+  pdf.text(
+    inrFormat(Math.abs(grandOut)) + (grandOut >= 0 ? ' Dr' : ' Cr'),
+    colXArr[3] + colW[3] - 2, y + 7.5, { align: 'right' }
+  );
 
   addWatermark(pdf);
   pdf.save(`Group_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
