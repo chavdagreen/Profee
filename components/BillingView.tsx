@@ -89,10 +89,10 @@ const BillingView: React.FC<BillingViewProps> = ({
   }, [prefill]);
 
   // ============ PDF DOWNLOAD HANDLERS ============
-  const handleDownloadInvoicePDF = async (invoiceNumber: string) => {
+  const handleDownloadInvoicePDF = async (invoice: Invoice) => {
     setIsDownloading(true);
     try {
-      await generateInvoicePDF(invoiceNumber);
+      await generateInvoicePDF(invoice, settings);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(err.message || 'Error generating PDF. Please try again.');
@@ -101,10 +101,10 @@ const BillingView: React.FC<BillingViewProps> = ({
     }
   };
 
-  const handleDownloadReceiptPDF = async (receiptNumber: string) => {
+  const handleDownloadReceiptPDF = async (receipt: Receipt) => {
     setIsDownloading(true);
     try {
-      await generateReceiptPDF(receiptNumber);
+      await generateReceiptPDF(receipt, settings);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(err.message || 'Error generating PDF. Please try again.');
@@ -465,7 +465,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                <button onClick={() => startEditInvoice(currentInvoice)} className="clay-card px-6 py-2 bg-slate-100 flex items-center gap-2 font-black text-xs hover:bg-slate-200 transition-all border-none shadow-sm"><Edit2 size={16} /> Edit Draft</button>
                <button
                  disabled={isDownloading}
-                 onClick={() => handleDownloadInvoicePDF(currentInvoice.invoiceNumber || 'Invoice')}
+                 onClick={() => handleDownloadInvoicePDF(currentInvoice)}
                  className="clay-button px-8 py-2 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
                >
                  {isDownloading ? (
@@ -489,7 +489,7 @@ const BillingView: React.FC<BillingViewProps> = ({
             <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-black hover:scale-105 transition-transform"><ChevronLeft size={20} /> Back to Records</button>
             <button
               disabled={isDownloading}
-              onClick={() => handleDownloadReceiptPDF(currentReceipt.receiptNumber || 'Receipt')}
+              onClick={() => handleDownloadReceiptPDF(currentReceipt)}
               className="clay-button px-8 py-2 bg-emerald-600 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
             >
               {isDownloading ? (
