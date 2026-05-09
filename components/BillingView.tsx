@@ -7,8 +7,12 @@ import {
   Banknote, Smartphone, Hash, X, Trash2, Smartphone as UpiIcon, Table,
   Edit2, FileDown, CheckCircle, Clock, AlertTriangle, QrCode, ChevronRight, Save
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import {
+  generateInvoicePDF,
+  generateReceiptPDF,
+  generateClientLedgerPDF,
+  generateGroupLedgerPDF,
+} from '../services/pdfGenerator';
 
 interface BillingViewProps {
   invoices: Invoice[];
@@ -84,73 +88,23 @@ const BillingView: React.FC<BillingViewProps> = ({
     }
   }, [prefill]);
 
-  // ============ PDF DOWNLOAD FUNCTION ============
-  const downloadPDF = async (elementId: string, filename: string) => {
+  // ============ PDF DOWNLOAD HANDLERS ============
+  const handleDownloadInvoicePDF = (invoice: Invoice) => {
     setIsDownloading(true);
     try {
-      const element = document.getElementById(elementId);
-      if (!element) {
-        throw new Error('Document element not found');
-      }
+      generateInvoicePDF(invoice, settings);
+    } catch (err: any) {
+      console.error('PDF generation error:', err);
+      alert(err.message || 'Error generating PDF. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        imageTimeout: 15000,
-        onclone: (clonedDoc: Document) => {
-          const el = clonedDoc.getElementById(elementId);
-          if (!el) return;
-          el.style.boxShadow = 'none';
-          el.style.borderRadius = '0';
-          el.style.border = 'none';
-          el.querySelectorAll('.clay-card').forEach((card: any) => {
-            card.style.boxShadow = 'none';
-            card.style.borderRadius = '8px';
-            card.style.border = '1px solid #e2e8f0';
-          });
-          el.querySelectorAll('[class*="shadow"]').forEach((s: any) => {
-            s.style.boxShadow = 'none';
-          });
-        }
-      });
-
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 5;
-      const contentWidth = pageWidth - (margin * 2);
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-      if (imgHeight <= pageHeight - (margin * 2)) {
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
-      } else {
-        let heightLeft = imgHeight;
-        let position = 0;
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
-        heightLeft -= (pageHeight - margin * 2);
-        position = -(pageHeight - margin * 2);
-        while (heightLeft > 0) {
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, imgHeight);
-          heightLeft -= (pageHeight - margin * 2);
-          position -= (pageHeight - margin * 2);
-        }
-      }
-
-      // Add Profee.in watermark on every page
-      const totalPages = pdf.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(9);
-        pdf.setTextColor(160, 160, 160);
-        pdf.text('Profee.in', margin + 1, pageHeight - 4);
-      }
-
-      pdf.save(filename);
+  const handleDownloadReceiptPDF = (receipt: Receipt) => {
+    setIsDownloading(true);
+    try {
+      generateReceiptPDF(receipt, settings);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(err.message || 'Error generating PDF. Please try again.');
@@ -511,7 +465,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                <button onClick={() => startEditInvoice(currentInvoice)} className="clay-card px-6 py-2 bg-slate-100 flex items-center gap-2 font-black text-xs hover:bg-slate-200 transition-all border-none shadow-sm"><Edit2 size={16} /> Edit Draft</button>
                <button
                  disabled={isDownloading}
-                 onClick={() => downloadPDF('invoice-capture', `${currentInvoice.invoiceNumber || 'Invoice'}.pdf`)}
+                 onClick={() => handleDownloadInvoicePDF(currentInvoice)}
                  className="clay-button px-8 py-2 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
                >
                  {isDownloading ? (
@@ -535,7 +489,7 @@ const BillingView: React.FC<BillingViewProps> = ({
             <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-black hover:scale-105 transition-transform"><ChevronLeft size={20} /> Back to Records</button>
             <button
               disabled={isDownloading}
-              onClick={() => downloadPDF('receipt-capture', `${currentReceipt.receiptNumber || 'Receipt'}.pdf`)}
+              onClick={() => handleDownloadReceiptPDF(currentReceipt)}
               className="clay-button px-8 py-2 bg-emerald-600 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
             >
               {isDownloading ? (
@@ -559,8 +513,8 @@ const BillingView: React.FC<BillingViewProps> = ({
           <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-bold hover:underline"><ChevronLeft size={20} /> Discard {isReceipt ? 'Receipt' : 'Invoice'}</button>
           {!isReceipt && (
             <div className="flex gap-8 text-right">
-              <div><p className="text-[10px] font-bold text-slate-400">Sub-Total</p><p className="text-xl font-bold">₹{(totals.subTotal || 0).toLocaleString()}</p></div>
-              <div><p className="text-[10px] font-bold text-slate-400">Payable</p><p className="text-2xl font-black text-indigo-600">₹{(totals.total || 0).toLocaleString()}</p></div>
+              <div><p className="text-xs font-bold text-slate-400">Sub-Total</p><p className="text-xl font-bold">₹{(totals.subTotal || 0).toLocaleString()}</p></div>
+              <div><p className="text-xs font-bold text-slate-400">Payable</p><p className="text-2xl font-black text-indigo-600">₹{(totals.total || 0).toLocaleString()}</p></div>
             </div>
           )}
         </div>
@@ -569,7 +523,7 @@ const BillingView: React.FC<BillingViewProps> = ({
           <form onSubmit={isReceipt ? handleSaveReceipt : handleSaveInvoice} className="space-y-10">
              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-2 col-span-1">
-                   <label className="text-[10px] font-bold text-slate-400">Client / Debtor</label>
+                   <label className="text-xs font-bold text-slate-500">Client / Debtor</label>
                    <select required className="clay-input w-full p-4 font-bold"
                     value={isReceipt ? receiptForm.clientId : invoiceForm.clientId}
                     onChange={e => isReceipt ? setReceiptForm({...receiptForm, clientId: e.target.value}) : setInvoiceForm({...invoiceForm, clientId: e.target.value})}>
@@ -578,14 +532,14 @@ const BillingView: React.FC<BillingViewProps> = ({
                    </select>
                 </div>
                 <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-400">{isReceipt ? 'Receipt' : 'Invoice'} Number</label>
+                   <label className="text-xs font-bold text-slate-500">{isReceipt ? 'Receipt' : 'Invoice'} Number</label>
                    <input className="clay-input w-full p-4 font-bold"
                     readOnly={!isReceipt && settings.isAutoNumbering && !isEditing}
                     value={isReceipt ? receiptForm.receiptNumber : invoiceForm.invoiceNumber}
                     onChange={e => isReceipt ? setReceiptForm({...receiptForm, receiptNumber: e.target.value}) : setInvoiceForm({...invoiceForm, invoiceNumber: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-400">Date</label>
+                   <label className="text-xs font-bold text-slate-500">Date</label>
                    <input type="date" className="clay-input w-full p-4 font-bold"
                     value={isReceipt ? receiptForm.date : invoiceForm.date}
                     onChange={e => isReceipt ? setReceiptForm({...receiptForm, date: e.target.value}) : setInvoiceForm({...invoiceForm, date: e.target.value})} />
@@ -595,11 +549,11 @@ const BillingView: React.FC<BillingViewProps> = ({
              {isReceipt ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                     <label className="text-[10px] font-bold text-slate-400">Amount Received (₹)</label>
+                     <label className="text-xs font-bold text-slate-500">Amount Received (₹)</label>
                      <input type="number" required className="clay-input w-full p-4 font-bold text-emerald-600 text-2xl" value={receiptForm.amount} onChange={e => setReceiptForm({...receiptForm, amount: Number(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
-                     <label className="text-[10px] font-bold text-slate-400">Payment Method</label>
+                     <label className="text-xs font-bold text-slate-500">Payment Method</label>
                      <select className="clay-input w-full p-4 font-bold" value={receiptForm.paymentMethod} onChange={e => setReceiptForm({...receiptForm, paymentMethod: e.target.value as any})}>
                        <option value="UPI">UPI / G-Pay</option>
                        <option value="Bank Transfer">NEFT / RTGS / IMPS</option>
@@ -608,7 +562,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                      </select>
                   </div>
                   <div className="col-span-2 space-y-2">
-                     <label className="text-[10px] font-bold text-slate-400">Transaction Reference (Optional)</label>
+                     <label className="text-xs font-bold text-slate-500">Transaction Reference (Optional)</label>
                      <input placeholder="UTR No. or Remarks" className="clay-input w-full p-4 font-bold" value={receiptForm.reference} onChange={e => setReceiptForm({...receiptForm, reference: e.target.value})} />
                   </div>
                 </div>
@@ -619,7 +573,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                       <h4 className="font-black text-slate-800 dark:text-white tracking-wide flex items-center gap-2"><Tag size={18} className="text-indigo-600" /> Line Items</h4>
                       <div className="flex gap-4">
                          <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl">
-                            <label className="text-[9px] font-bold text-slate-400">Apply GST</label>
+                            <label className="text-xs font-bold text-slate-400">Apply GST</label>
                             <div className={`w-3 h-3 rounded-full ${settings.isGstApplicable ? 'bg-indigo-600' : 'bg-slate-300'}`}></div>
                          </div>
                       </div>
@@ -627,7 +581,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                     {(invoiceForm.items || []).map((item, idx) => (
                       <div key={item.id} className="grid grid-cols-12 gap-4 p-5 bg-slate-50 dark:bg-slate-900 rounded-3xl group transition-all hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-indigo-50">
                           <div className="col-span-12 md:col-span-5 space-y-1">
-                            <label className="text-[8px] font-bold text-slate-400">Service Description</label>
+                            <label className="text-xs font-bold text-slate-500">Service Description</label>
                             <input required className="clay-input w-full p-3 font-bold text-sm" value={item.description} onChange={e => {
                               const newItems = [...invoiceForm.items!];
                               newItems[idx].description = e.target.value;
@@ -636,7 +590,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                           </div>
                           {settings.isGstApplicable && (
                             <div className="col-span-3 md:col-span-2 space-y-1">
-                              <label className="text-[8px] font-bold text-slate-400">SAC/HSN</label>
+                              <label className="text-xs font-bold text-slate-500">SAC/HSN</label>
                               <input className="clay-input w-full p-3 font-bold text-sm text-center" value={item.hsn} onChange={e => {
                                 const newItems = [...invoiceForm.items!];
                                 newItems[idx].hsn = e.target.value;
@@ -645,7 +599,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                             </div>
                           )}
                           <div className="col-span-3 md:col-span-2 space-y-1">
-                            <label className="text-[8px] font-bold text-slate-400">Professional Fee (₹)</label>
+                            <label className="text-xs font-bold text-slate-500">Professional Fee (₹)</label>
                             <input type="number" required className="clay-input w-full p-3 font-bold text-sm text-right text-indigo-600" value={item.rate} onChange={e => {
                               const newItems = [...invoiceForm.items!];
                               newItems[idx].rate = Number(e.target.value);
@@ -654,7 +608,7 @@ const BillingView: React.FC<BillingViewProps> = ({
                           </div>
                           {settings.isGstApplicable && (
                             <div className="col-span-3 md:col-span-2 space-y-1">
-                              <label className="text-[8px] font-bold text-slate-400">GST %</label>
+                              <label className="text-xs font-bold text-slate-500">GST %</label>
                               <select className="clay-input w-full p-3 font-bold text-sm" value={item.gstPercent} onChange={e => {
                                 const newItems = [...invoiceForm.items!];
                                 newItems[idx].gstPercent = Number(e.target.value);
@@ -682,19 +636,19 @@ const BillingView: React.FC<BillingViewProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t">
                     <div className="space-y-4">
                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-slate-400">Apply Special Discount (%)</label>
+                          <label className="text-xs font-bold text-slate-500">Apply Special Discount (%)</label>
                           <input type="number" className="clay-input w-full p-4 font-bold text-emerald-600" value={invoiceForm.discountPercent} onChange={e => {
                             const dPct = Number(e.target.value);
                             setInvoiceForm({...invoiceForm, discountPercent: dPct, discountAmount: (totals.subTotal * dPct / 100)});
                           }} />
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-slate-400">Additional Notes</label>
+                          <label className="text-xs font-bold text-slate-500">Additional Notes</label>
                           <textarea className="clay-input w-full p-4 font-bold text-sm" rows={4} value={invoiceForm.notes} onChange={e => setInvoiceForm({...invoiceForm, notes: e.target.value})} />
                        </div>
                     </div>
                     <div className="clay-card bg-slate-50 p-8 border-none space-y-4 h-fit">
-                       <h5 className="text-[10px] font-bold text-slate-400 border-b pb-2">Financial Breakdown</h5>
+                       <h5 className="text-xs font-bold text-slate-500 border-b pb-2">Financial Breakdown</h5>
                        <div className="space-y-3">
                           <div className="flex justify-between text-xs font-bold"><span>Taxable Value</span><span>₹{(totals.taxableAmount || 0).toLocaleString()}</span></div>
                           {settings.isGstApplicable && (
@@ -733,11 +687,11 @@ const BillingView: React.FC<BillingViewProps> = ({
                <div className="clay-card p-10 bg-white dark:bg-slate-800 border-none shadow-2xl">
                   <h3 className="text-xl font-black tracking-tight mb-8 border-b pb-4 flex items-center gap-3"><Settings className="text-indigo-600" /> Practice & Identity</h3>
                   <div className="grid grid-cols-2 gap-8">
-                     <div className="col-span-2 space-y-2"><label className="text-[10px] font-bold text-slate-400">Brand Theme Color (Invoice Layout)</label><div className="flex gap-4">{['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#0f172a', '#7c3aed', '#db2777'].map(c => <button key={c} onClick={() => setLocalSettings({...localSettings, themeColor: c})} className={`w-12 h-12 rounded-2xl border-4 ${localSettings.themeColor === c ? 'border-indigo-200 scale-110 shadow-lg' : 'border-transparent'}`} style={{backgroundColor: c}} />)}</div></div>
-                     <div className="col-span-2 space-y-2"><label className="text-[10px] font-bold text-slate-400">Firm Name</label><input className="clay-input w-full p-4 font-bold" value={localSettings.practiceName} onChange={e => setLocalSettings({...localSettings, practiceName: e.target.value})} /></div>
-                     <div className="col-span-2 space-y-2"><label className="text-[10px] font-bold text-slate-400">Address Line</label><textarea className="clay-input w-full p-4 font-bold" rows={2} value={localSettings.address} onChange={e => setLocalSettings({...localSettings, address: e.target.value})} /></div>
-                     <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400">GSTIN Number</label><input className="clay-input w-full p-4 font-bold" value={localSettings.gstin} onChange={e => setLocalSettings({...localSettings, gstin: e.target.value.toUpperCase()})} /></div>
-                     <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400">Permanent Account No. (PAN)</label><input className="clay-input w-full p-4 font-bold" value={localSettings.pan} onChange={e => setLocalSettings({...localSettings, pan: e.target.value.toUpperCase()})} /></div>
+                     <div className="col-span-2 space-y-2"><label className="text-xs font-bold text-slate-500">Brand Theme Color (Invoice Layout)</label><div className="flex gap-4">{['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#0f172a', '#7c3aed', '#db2777'].map(c => <button key={c} onClick={() => setLocalSettings({...localSettings, themeColor: c})} className={`w-12 h-12 rounded-2xl border-4 ${localSettings.themeColor === c ? 'border-indigo-200 scale-110 shadow-lg' : 'border-transparent'}`} style={{backgroundColor: c}} />)}</div></div>
+                     <div className="col-span-2 space-y-2"><label className="text-xs font-bold text-slate-500">Firm Name</label><input className="clay-input w-full p-4 font-bold" value={localSettings.practiceName} onChange={e => setLocalSettings({...localSettings, practiceName: e.target.value})} /></div>
+                     <div className="col-span-2 space-y-2"><label className="text-xs font-bold text-slate-500">Address Line</label><textarea className="clay-input w-full p-4 font-bold" rows={2} value={localSettings.address} onChange={e => setLocalSettings({...localSettings, address: e.target.value})} /></div>
+                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500">GSTIN Number</label><input className="clay-input w-full p-4 font-bold" value={localSettings.gstin} onChange={e => setLocalSettings({...localSettings, gstin: e.target.value.toUpperCase()})} /></div>
+                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500">Permanent Account No. (PAN)</label><input className="clay-input w-full p-4 font-bold" value={localSettings.pan} onChange={e => setLocalSettings({...localSettings, pan: e.target.value.toUpperCase()})} /></div>
                   </div>
                </div>
 
@@ -745,15 +699,15 @@ const BillingView: React.FC<BillingViewProps> = ({
                   <h3 className="text-xl font-black tracking-tight mb-8 border-b pb-4">Accounting Logic</h3>
                   <div className="grid grid-cols-2 gap-8">
                      <div className="p-6 bg-slate-50 rounded-3xl flex items-center justify-between">
-                        <div><p className="font-black text-sm tracking-tight">GST Compliance Mode</p><p className="text-[9px] text-slate-400 font-bold">Shows tax columns in invoice create</p></div>
+                        <div><p className="font-black text-sm tracking-tight">GST Compliance Mode</p><p className="text-xs text-slate-400 font-bold">Shows tax columns in invoice create</p></div>
                         <button onClick={() => setLocalSettings({...localSettings, isGstApplicable: !localSettings.isGstApplicable})} className={`w-14 h-8 rounded-full transition-all relative p-1 ${localSettings.isGstApplicable ? 'bg-indigo-600' : 'bg-slate-300'}`}><div className={`w-6 h-6 bg-white rounded-full transition-all ${localSettings.isGstApplicable ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
                      </div>
                      <div className="p-6 bg-slate-50 rounded-3xl flex items-center justify-between">
-                        <div><p className="font-black text-sm tracking-tight">Auto-Numbering</p><p className="text-[9px] text-slate-400 font-bold">Increment invoice# automatically</p></div>
+                        <div><p className="font-black text-sm tracking-tight">Auto-Numbering</p><p className="text-xs text-slate-400 font-bold">Increment invoice# automatically</p></div>
                         <button onClick={() => setLocalSettings({...localSettings, isAutoNumbering: !localSettings.isAutoNumbering})} className={`w-14 h-8 rounded-full transition-all relative p-1 ${localSettings.isAutoNumbering ? 'bg-indigo-600' : 'bg-slate-300'}`}><div className={`w-6 h-6 bg-white rounded-full transition-all ${localSettings.isAutoNumbering ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
                      </div>
-                     <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400">Invoice Prefix</label><input className="clay-input w-full p-4 font-bold" value={localSettings.prefix} onChange={e => setLocalSettings({...localSettings, prefix: e.target.value})} /></div>
-                     <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400">Last Serial No.</label><input type="number" className="clay-input w-full p-4 font-bold" value={localSettings.lastNumber} onChange={e => setLocalSettings({...localSettings, lastNumber: Number(e.target.value)})} /></div>
+                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500">Invoice Prefix</label><input className="clay-input w-full p-4 font-bold" value={localSettings.prefix} onChange={e => setLocalSettings({...localSettings, prefix: e.target.value})} /></div>
+                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500">Last Serial No.</label><input type="number" className="clay-input w-full p-4 font-bold" value={localSettings.lastNumber} onChange={e => setLocalSettings({...localSettings, lastNumber: Number(e.target.value)})} /></div>
                   </div>
                </div>
             </div>
@@ -762,23 +716,23 @@ const BillingView: React.FC<BillingViewProps> = ({
                <div className="clay-card p-8 bg-white dark:bg-slate-800 border-none shadow-2xl">
                   <h3 className="text-lg font-black tracking-tight mb-6">Default Note (Invoices)</h3>
                   <textarea className="clay-input w-full p-4 font-bold text-xs" rows={6} value={localSettings.defaultNotes} onChange={e => setLocalSettings({...localSettings, defaultNotes: e.target.value})} />
-                  <p className="text-[9px] text-slate-400 mt-4 uppercase font-bold tracking-widest">This will appear on the bottom left of every professional bill generated.</p>
+                  <p className="text-xs text-slate-400 mt-4 font-bold">This will appear on the bottom left of every professional bill generated.</p>
                </div>
 
                <div className="clay-card p-8 bg-indigo-600 text-white border-none shadow-xl">
                   <h3 className="text-lg font-black tracking-tight mb-4">Banking Link</h3>
                   <div className="space-y-4">
-                     <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-60">Account Holder Name</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.accountHolder} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, accountHolder: e.target.value}})} /></div>
-                     <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-60">Account Number</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.accountNumber} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, accountNumber: e.target.value}})} /></div>
-                     <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-60">IFSC Code</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.ifsc} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, ifsc: e.target.value}})} /></div>
-                     <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-60">Bank Name</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.bankName} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, bankName: e.target.value}})} /></div>
-                     <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-60">Account Type</p>
+                     <div className="space-y-1"><p className="text-xs font-bold uppercase opacity-70">Account Holder Name</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.accountHolder} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, accountHolder: e.target.value}})} /></div>
+                     <div className="space-y-1"><p className="text-xs font-bold uppercase opacity-70">Account Number</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.accountNumber} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, accountNumber: e.target.value}})} /></div>
+                     <div className="space-y-1"><p className="text-xs font-bold uppercase opacity-70">IFSC Code</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.ifsc} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, ifsc: e.target.value}})} /></div>
+                     <div className="space-y-1"><p className="text-xs font-bold uppercase opacity-70">Bank Name</p><input className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.bankName} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, bankName: e.target.value}})} /></div>
+                     <div className="space-y-1"><p className="text-xs font-bold uppercase opacity-70">Account Type</p>
                        <select className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm text-white" value={localSettings.bankDetails.accountType} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, accountType: e.target.value}})}>
                          <option value="Current" className="text-slate-800">Current</option>
                          <option value="Savings" className="text-slate-800">Savings</option>
                        </select>
                      </div>
-                     <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-60">UPI ID for Payments</p><input placeholder="yourname@okbank" className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.upiId} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, upiId: e.target.value}})} /></div>
+                     <div className="space-y-1"><p className="text-xs font-bold uppercase opacity-70">UPI ID for Payments</p><input placeholder="yourname@okbank" className="bg-white/10 w-full p-3 rounded-xl border border-white/20 font-bold text-sm" value={localSettings.bankDetails.upiId} onChange={e => setLocalSettings({...localSettings, bankDetails: {...localSettings.bankDetails, upiId: e.target.value}})} /></div>
                   </div>
                </div>
             </div>
@@ -835,14 +789,32 @@ const BillingView: React.FC<BillingViewProps> = ({
           <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-black hover:underline"><ChevronLeft size={20} /> Back to Records</button>
           <button
             disabled={isDownloading}
-            onClick={() => downloadPDF('ledger-capture', `Ledger_${clientData?.name || 'Client'}.pdf`)}
+            onClick={() => {
+              setIsDownloading(true);
+              try {
+                generateClientLedgerPDF(
+                  clientData?.name || 'Client',
+                  clientData?.pan,
+                  ledgerWithBalance,
+                  totalInvoiced,
+                  totalReceived,
+                  settings.practiceName,
+                  ledgerDateFrom,
+                  ledgerDateTo,
+                );
+              } catch (err: any) {
+                alert(err.message || 'Error generating PDF');
+              } finally {
+                setIsDownloading(false);
+              }
+            }}
             className="clay-button px-8 py-2 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
           >
             {isDownloading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Generating...</> : <><FileDown size={20} /> Download PDF</>}
           </button>
         </div>
 
-        <div id="ledger-capture" className="bg-white p-10 rounded-3xl shadow-2xl">
+        <div className="bg-white p-10 rounded-3xl shadow-2xl border border-slate-100">
           <div className="flex justify-between items-start mb-8 pb-6 border-b">
             <div>
               <h1 className="text-3xl font-black text-slate-800 tracking-tighter">Client Ledger</h1>
@@ -860,7 +832,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
           <table className="w-full text-sm mb-8">
             <thead>
-              <tr className="bg-slate-100 text-[10px] font-black text-slate-500">
+              <tr className="bg-slate-100 text-xs font-black text-slate-500">
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Ref#</th>
                 <th className="px-4 py-3 text-left">Description</th>
@@ -885,15 +857,15 @@ const BillingView: React.FC<BillingViewProps> = ({
 
           <div className="grid grid-cols-3 gap-4 p-6 bg-slate-50 rounded-2xl">
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 mb-1">Total Invoiced</p>
+              <p className="text-xs font-bold text-slate-400 mb-1">Total Invoiced</p>
               <p className="text-xl font-black text-rose-600">₹{totalInvoiced.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 mb-1">Total Received</p>
+              <p className="text-xs font-bold text-slate-400 mb-1">Total Received</p>
               <p className="text-xl font-black text-emerald-600">₹{totalReceived.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-slate-400 mb-1">Outstanding</p>
+              <p className="text-xs font-bold text-slate-400 mb-1">Outstanding</p>
               <p className={`text-xl font-black ${totalInvoiced - totalReceived >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₹{Math.abs(totalInvoiced - totalReceived).toLocaleString()}</p>
             </div>
           </div>
@@ -939,7 +911,21 @@ const BillingView: React.FC<BillingViewProps> = ({
           <button onClick={() => setSubView('list')} className="flex items-center gap-2 text-indigo-600 font-black hover:underline"><ChevronLeft size={20} /> Back to Records</button>
           <button
             disabled={isDownloading || selectedGroupClients.length === 0}
-            onClick={() => downloadPDF('group-ledger-capture', `Group_Ledger_${new Date().toISOString().split('T')[0]}.pdf`)}
+            onClick={() => {
+              setIsDownloading(true);
+              try {
+                generateGroupLedgerPDF(
+                  clientSummaries.map(s => ({ clientName: s.client.name, totalInvoiced: s.totalInvoiced, totalReceived: s.totalReceived, outstanding: s.outstanding })),
+                  settings.practiceName,
+                  ledgerDateFrom,
+                  ledgerDateTo,
+                );
+              } catch (err: any) {
+                alert(err.message || 'Error generating PDF');
+              } finally {
+                setIsDownloading(false);
+              }
+            }}
             className="clay-button px-8 py-2 flex items-center gap-2 font-black shadow-lg disabled:opacity-50"
           >
             {isDownloading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Generating...</> : <><FileDown size={20} /> Download PDF</>}
@@ -976,18 +962,18 @@ const BillingView: React.FC<BillingViewProps> = ({
           <h4 className="text-sm font-black text-slate-600 dark:text-slate-300 mb-3">Filter by Date Range</h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400">From</label>
+              <label className="text-xs font-bold text-slate-500">From</label>
               <input type="date" className="clay-input w-full p-3 font-bold" value={ledgerDateFrom} onChange={e => setLedgerDateFrom(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400">To</label>
+              <label className="text-xs font-bold text-slate-500">To</label>
               <input type="date" className="clay-input w-full p-3 font-bold" value={ledgerDateTo} onChange={e => setLedgerDateTo(e.target.value)} />
             </div>
           </div>
         </div>
 
         {selectedGroupClients.length > 0 && (
-          <div id="group-ledger-capture" className="bg-white p-10 rounded-3xl shadow-2xl">
+          <div className="bg-white p-10 rounded-3xl shadow-2xl border border-slate-100">
             <div className="flex justify-between items-start mb-8 pb-6 border-b">
               <div>
                 <h1 className="text-3xl font-black text-slate-800 tracking-tighter">Group Ledger</h1>
@@ -1001,7 +987,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
             <table className="w-full text-sm mb-8">
               <thead>
-                <tr className="bg-slate-100 text-[10px] font-black text-slate-500">
+                <tr className="bg-slate-100 text-xs font-black text-slate-500">
                   <th className="px-4 py-3 text-left">Client</th>
                   <th className="px-4 py-3 text-right">Total Invoiced (₹)</th>
                   <th className="px-4 py-3 text-right">Total Received (₹)</th>
@@ -1077,7 +1063,7 @@ const BillingView: React.FC<BillingViewProps> = ({
 
         <table className="w-full text-left font-bold text-sm">
            <thead>
-             <tr className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-bold text-slate-400 border-b dark:border-slate-700">
+             <tr className="bg-slate-50 dark:bg-slate-900/50 text-xs font-bold text-slate-400 border-b dark:border-slate-700">
                <th className="px-6 py-5">Number</th>
                <th className="px-6 py-5">Party</th>
                <th className="px-6 py-5">Date</th>
