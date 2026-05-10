@@ -635,110 +635,180 @@ export function generateClientLedgerPDF(
   const pdf  = new jsPDF('p', 'mm', 'a4');
   const W    = 210;
   const M    = 14;
-  const CW   = W - M * 2;
-  let y      = 0;
-
-  // Header
-  fc(pdf, S800);  pdf.rect(0, 0, W, 32, 'F');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(18);  tc(pdf, WHT);
-  pdf.text('CLIENT LEDGER', M, 16);
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);
-  pdf.text(practiceName, M, 25);
-  pdf.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, W - M, 25, { align: 'right' });
-
-  y = 40;
-
-  // Client info bar
-  fc(pdf, S50);  pdf.rect(M, y, CW, 14, 'F');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(11);  tc(pdf, S800);
-  pdf.text(clientName.toUpperCase(), M + 4, y + 6);
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, S500);
-  if (clientPan) pdf.text(`PAN: ${clientPan}`, M + 4, y + 11);
-  if (dateFrom || dateTo)
-    pdf.text(`Period: ${dateFrom || 'Start'} to ${dateTo || 'Present'}`, W - M - 4, y + 6, { align: 'right' });
-  y += 20;
-
-  // Table header
-  const colW  = [22, 28, 62, 28, 28, 14];
-  const BAL_W = 24;
-  const colXs: number[] = [M];
-  colW.forEach((w, i) => { if (i < colW.length - 1) colXs.push(colXs[i] + w); });
-  const balX = M + CW - BAL_W;
-
-  fc(pdf, S800);  pdf.rect(M, y, CW, 8, 'F');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
-  const hdrs = ['Date', 'Reference', 'Description', 'Debit (Rs.)', 'Credit (Rs.)', 'Balance (Rs.)'];
-  const hAl: Align[] = ['left', 'left', 'left', 'right', 'right', 'right'];
-  hdrs.forEach((h, i) => {
-    const hx = i < 5
-      ? (hAl[i] === 'right' ? colXs[i] + colW[i] - 2 : colXs[i] + 2)
-      : balX + BAL_W - 2;
-    pdf.text(h, hx, y + 5.5, { align: hAl[i] });
-  });
-  y += 8;
-
-  type Align = 'left' | 'center' | 'right';
-  const ROSE: RGB = [225, 29,  72];
+  const CW   = W - M * 2;   // 182 mm
+  const ROSE: RGB = [220, 38,  72];
   const GREE: RGB = [5,   150, 105];
+  const IDIG: RGB = [99,  102, 241];
+  type Align = 'left' | 'center' | 'right';
 
+  // ── Header ──────────────────────────────────────────────────────────────────
+  fc(pdf, IDIG);  pdf.rect(0, 0, W, 2, 'F');
+
+  let y = 12;
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(20);  tc(pdf, S800);
+  pdf.text('CLIENT LEDGER', M, y);
+
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(10);  tc(pdf, S800);
+  pdf.text(practiceName, W - M, y, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, S500);
+  pdf.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, W - M, y + 7, { align: 'right' });
+
+  y += 11;
+  dc(pdf, S100);  pdf.setLineWidth(0.4);  pdf.line(M, y, M + CW, y);
+  y += 6;
+
+  // ── Client info card ────────────────────────────────────────────────────────
+  fc(pdf, S50);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.3);
+  pdf.roundedRect(M, y, CW, 18, 2, 2, 'FD');
+
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(12);  tc(pdf, S800);
+  pdf.text(clientName.toUpperCase(), M + 5, y + 8);
+
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, S500);
+  const infoParts: string[] = [];
+  if (clientPan) infoParts.push(`PAN: ${clientPan}`);
+  if (dateFrom || dateTo) infoParts.push(`Period: ${dateFrom || 'Start'} to ${dateTo || 'Present'}`);
+  if (infoParts.length) pdf.text(infoParts.join('   |   '), M + 5, y + 14);
+
+  // Summary mini-stats inside card (right side)
+  const statX = M + CW - 3;
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, S300);
+  pdf.text('INVOICED', statX - 88, y + 6, { align: 'right' });
+  pdf.text('RECEIVED', statX - 44, y + 6, { align: 'right' });
+  pdf.text('OUTSTANDING', statX, y + 6, { align: 'right' });
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);
+  tc(pdf, ROSE);  pdf.text(inr(totalInvoiced, 2), statX - 88, y + 13, { align: 'right' });
+  tc(pdf, GREE);  pdf.text(inr(totalReceived, 2), statX - 44, y + 13, { align: 'right' });
+  const outstanding = totalInvoiced - totalReceived;
+  tc(pdf, outstanding >= 0 ? ROSE : GREE);
+  pdf.text(inr(Math.abs(outstanding), 2) + (outstanding > 0 ? ' Dr' : outstanding < 0 ? ' Cr' : ''), statX, y + 13, { align: 'right' });
+
+  y += 24;
+
+  // ── Table ────────────────────────────────────────────────────────────────────
+  // Columns: Inv.Date(22) Invoice#(26) Rcpt.Date(22) Receipt#(26) Debit(28) Credit(28) Balance(30) = 182
+  const colW   = [22, 26, 22, 26, 28, 28, 30];
+  const colX: number[] = [M];
+  colW.slice(0, -1).forEach((w, i) => colX.push(colX[i] + w));
+  const RIGHT  = M + CW;
+
+  // Table container (rounded)
+  const ROW_H  = 9;
+  const HDR_H  = 8;
+  const SUB_H  = 5;
+  const tableH = HDR_H + SUB_H + entries.length * ROW_H + ROW_H + 2;
+  fc(pdf, WHT);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.4);
+  pdf.roundedRect(M, y, CW, Math.min(tableH, 260 - y), 3, 3, 'FD');
+
+  // Header row
+  fc(pdf, S800);  pdf.roundedRect(M, y, CW, HDR_H, 3, 3, 'F');
+  pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F');
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, WHT);
+  const hdrs  = ['Inv. Date', 'Invoice #', 'Rcpt. Date', 'Receipt #', 'Debit', 'Credit', 'Balance'];
+  const hAl: Align[] = ['left', 'left', 'left', 'left', 'right', 'right', 'right'];
+  hdrs.forEach((h, i) => {
+    const isLast = i === hdrs.length - 1;
+    const tx = hAl[i] === 'right'
+      ? (isLast ? RIGHT - 2 : colX[i] + colW[i] - 2)
+      : colX[i] + 2;
+    pdf.text(h, tx, y + 5.5, { align: hAl[i] });
+  });
+  y += HDR_H;
+
+  // Sub-label row
+  fc(pdf, [241, 245, 249]);  pdf.rect(M, y, CW, SUB_H, 'F');
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(5.5);  tc(pdf, S500);
+  pdf.text('(Amount in Rs.)', colX[4] + colW[4] - 2, y + 3.5, { align: 'right' });
+  pdf.text('(Amount in Rs.)', colX[5] + colW[5] - 2, y + 3.5, { align: 'right' });
+  pdf.text('Dr = Outstanding', RIGHT - 2, y + 3.5, { align: 'right' });
+  y += SUB_H;
+
+  // Data rows
   entries.forEach((entry, idx) => {
-    if (y + 10 > 272) { pdf.addPage(); y = 16; }
+    if (y + ROW_H > 275) { pdf.addPage(); y = M; }
 
-    const rowBg: RGB = idx % 2 === 0 ? WHT : [249, 250, 251];
-    fc(pdf, rowBg);  pdf.rect(M, y, CW, 9, 'F');
-    dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.2);
-    pdf.line(M, y + 9, M + CW, y + 9);
+    const rowBg: RGB = idx % 2 === 0 ? WHT : [248, 250, 252];
+    fc(pdf, rowBg);  pdf.rect(M, y, CW, ROW_H, 'F');
+    dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.15);
+    pdf.line(M + 2, y + ROW_H, M + CW - 2, y + ROW_H);
 
-    const debit  = entry.type === 'invoice' ? inr(entry.amount, 2) : '';
-    const credit = entry.type === 'receipt' ? inr(entry.amount, 2) : '';
-    const balTxt = `${inr(Math.abs(entry.balance), 2)} ${entry.balance >= 0 ? 'Dr' : 'Cr'}`;
+    const midY = y + ROW_H / 2 + 1.5;
+    const isInv = entry.type === 'invoice';
 
-    tc(pdf, S800);  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);
-    [entry.date, entry.ref || '—', entry.description].forEach((v, i) =>
-      pdf.text(v.slice(0, i === 2 ? 36 : 18), colXs[i] + 2, y + 6));
+    // Invoice Date | Invoice # (filled only for invoices)
+    pdf.setFont('helvetica', isInv ? 'bold' : 'normal');  pdf.setFontSize(7.5);
+    tc(pdf, isInv ? IDIG : S300);
+    pdf.text(isInv ? fmtDate(entry.date) : '—', colX[0] + 2, midY);
+    pdf.text(isInv ? (entry.ref || '—') : '—',  colX[1] + 2, midY);
 
-    if (debit)  { tc(pdf, ROSE); pdf.setFont('helvetica', 'bold'); pdf.text(debit,  colXs[3] + colW[3] - 2, y + 6, { align: 'right' }); }
-    if (credit) { tc(pdf, GREE); pdf.setFont('helvetica', 'bold'); pdf.text(credit, colXs[4] + colW[4] - 2, y + 6, { align: 'right' }); }
-    tc(pdf, entry.balance >= 0 ? ROSE : GREE);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(balTxt, balX + BAL_W - 2, y + 6, { align: 'right' });
-    y += 9;
+    // Receipt Date | Receipt # (filled only for receipts)
+    tc(pdf, !isInv ? GREE : S300);
+    pdf.setFont('helvetica', !isInv ? 'bold' : 'normal');
+    pdf.text(!isInv ? fmtDate(entry.date) : '—', colX[2] + 2, midY);
+    pdf.text(!isInv ? (entry.ref || '—') : '—',  colX[3] + 2, midY);
+
+    // Debit
+    if (isInv) {
+      pdf.setFont('helvetica', 'bold');  tc(pdf, ROSE);
+      pdf.text(inr(entry.amount, 2), colX[4] + colW[4] - 2, midY, { align: 'right' });
+    } else {
+      pdf.setFont('helvetica', 'normal');  tc(pdf, S300);
+      pdf.text('—', colX[4] + colW[4] - 2, midY, { align: 'right' });
+    }
+
+    // Credit
+    if (!isInv) {
+      pdf.setFont('helvetica', 'bold');  tc(pdf, GREE);
+      pdf.text(inr(entry.amount, 2), colX[5] + colW[5] - 2, midY, { align: 'right' });
+    } else {
+      pdf.setFont('helvetica', 'normal');  tc(pdf, S300);
+      pdf.text('—', colX[5] + colW[5] - 2, midY, { align: 'right' });
+    }
+
+    // Balance
+    const balColor: RGB = entry.balance >= 0 ? ROSE : GREE;
+    const balTxt = inr(Math.abs(entry.balance), 2) + (entry.balance > 0 ? ' Dr' : entry.balance < 0 ? ' Cr' : '');
+    pdf.setFont('helvetica', 'bold');  tc(pdf, balColor);
+    pdf.text(balTxt, RIGHT - 2, midY, { align: 'right' });
+
+    y += ROW_H;
   });
 
   if (!entries.length) {
     pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, S500);
-    pdf.text('No transactions found for the selected period.', W / 2, y + 10, { align: 'center' });
-    y += 20;
+    pdf.text('No transactions found for the selected period.', W / 2, y + 8, { align: 'center' });
+    y += 16;
+  } else {
+    // Closing balance row
+    if (y + ROW_H > 275) { pdf.addPage(); y = M; }
+    fc(pdf, S800);  pdf.roundedRect(M, y, CW, ROW_H, 3, 3, 'F');
+    pdf.rect(M, y, CW, ROW_H / 2, 'F');
+    const closingBal = entries[entries.length - 1]?.balance ?? 0;
+    const closingTxt = inr(Math.abs(closingBal), 2) + (closingBal > 0 ? ' Dr' : closingBal < 0 ? ' Cr' : '');
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
+    pdf.text('CLOSING BALANCE', colX[0] + 2, y + ROW_H / 2 + 1.5);
+    pdf.text(closingTxt, RIGHT - 2, y + ROW_H / 2 + 1.5, { align: 'right' });
+    y += ROW_H;
   }
 
-  // Summary footer
-  y += 6;
-  if (y + 22 > 272) { pdf.addPage(); y = 20; }
-  fc(pdf, S50);  pdf.rect(M, y, CW, 22, 'F');
-  dc(pdf, S300);  pdf.setLineWidth(0.4);  pdf.rect(M, y, CW, 22);
-
-  const sumData: [string, string, RGB][] = [
-    ['Total Invoiced', inr(totalInvoiced, 2), ROSE],
-    ['Total Received', inr(totalReceived, 2), GREE],
-    ['Outstanding',    inr(Math.abs(totalInvoiced - totalReceived), 2),
-     totalInvoiced >= totalReceived ? ROSE : GREE],
-  ];
-  const sumColW = CW / 3;
-  sumData.forEach(([label, val, color], i) => {
-    const sx = M + i * sumColW + sumColW / 2;
-    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S500);
-    pdf.text(label, sx, y + 7, { align: 'center' });
-    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(13);  tc(pdf, color);
-    pdf.text(val, sx, y + 17, { align: 'center' });
-  });
-
   addFooterWatermark(pdf);
-  pdf.save(`Ledger_${clientName}.pdf`);
+  pdf.save(`Ledger_${clientName.replace(/\s+/g, '_')}.pdf`);
 }
 
 // ─── GROUP LEDGER PDF ─────────────────────────────────────────────────────────
 
+interface GroupLedgerEntry {
+  clientName: string;
+  groupName?: string;
+  type: 'invoice' | 'receipt';
+  date: string;
+  ref: string;
+  amount: number;
+  balance: number;
+}
+
 export function generateGroupLedgerPDF(
+  entries: GroupLedgerEntry[],
   summaries: { clientName: string; groupName?: string; totalInvoiced: number; totalReceived: number; outstanding: number }[],
   practiceName: string,
   dateFrom?: string,
@@ -812,130 +882,117 @@ export function generateGroupLedgerPDF(
     pdf.text(val, cx + 6, y + 18);
   });
 
-  y += CARD_H + 10;
+  y += CARD_H + 8;
 
-  // ── 3. Table ─────────────────────────────────────────────────────────────────
-  // Column definitions — add Group column when clients span multiple groups
-  // multiGroup: Client(58) Group(26) Invoiced(30) Received(30) Outstanding(38) = 182
-  // singleGroup: Client(82) Invoiced(32) Received(32) Outstanding(36) = 182
-  const colW  = multiGroup ? [58, 26, 30, 30, 38] : [82, 32, 32, 36];
+  // ── 3. Detailed transaction table ────────────────────────────────────────────
+  // Columns: Client(34) Inv.Date(20) Invoice#(22) Rcpt.Date(20) Receipt#(22) Debit(22) Credit(22) Balance(20) = 182
+  const colW  = [34, 20, 22, 20, 22, 22, 22, 20];
   const colX: number[] = [M];
   colW.slice(0, -1).forEach((w, i) => colX.push(colX[i] + w));
   const RIGHT = M + CW;
+  const ROW_H = 9;
+  const HDR_H = 8;
 
-  const tableTopY = y;
-  const estRows   = summaries.length + 1;
-  const ROW_H     = 10;
-  const HDR_H     = 9;
-  const tableH    = HDR_H + 5 + estRows * ROW_H + 2;
-
+  // Table container
   fc(pdf, WHT);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.4);
-  pdf.roundedRect(M, tableTopY, CW, Math.min(tableH, 245 - tableTopY), 3, 3, 'FD');
+  pdf.roundedRect(M, y, CW, Math.min(HDR_H + 5 + entries.length * ROW_H + ROW_H + 2, 255 - y), 3, 3, 'FD');
 
-  // Header row
+  // Header
   fc(pdf, S800);  pdf.roundedRect(M, y, CW, HDR_H, 3, 3, 'F');
   pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F');
-
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
-  if (multiGroup) {
-    pdf.text('Client Name', colX[0] + 4, y + 6);
-    pdf.text('Group',       colX[1] + 4, y + 6);
-    pdf.text('Invoiced',    colX[2] + colW[2] - 3, y + 6, { align: 'right' });
-    pdf.text('Received',    colX[3] + colW[3] - 3, y + 6, { align: 'right' });
-    pdf.text('Outstanding', RIGHT - 3,              y + 6, { align: 'right' });
-  } else {
-    pdf.text('Client Name', colX[0] + 4, y + 6);
-    pdf.text('Invoiced',    colX[1] + colW[1] - 3, y + 6, { align: 'right' });
-    pdf.text('Received',    colX[2] + colW[2] - 3, y + 6, { align: 'right' });
-    pdf.text('Outstanding', RIGHT - 3,              y + 6, { align: 'right' });
-  }
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(6.5);  tc(pdf, WHT);
+  const grpHdrs = ['Client', 'Inv. Date', 'Invoice #', 'Rcpt. Date', 'Receipt #', 'Debit', 'Credit', 'Balance'];
+  const grpAl = ['left','left','left','left','left','right','right','right'] as const;
+  grpHdrs.forEach((h, i) => {
+    const isLast = i === grpHdrs.length - 1;
+    const tx = grpAl[i] === 'right'
+      ? (isLast ? RIGHT - 2 : colX[i] + colW[i] - 2)
+      : colX[i] + 2;
+    pdf.text(h, tx, y + 5.3, { align: grpAl[i] });
+  });
   y += HDR_H;
 
   // Sub-label row
   fc(pdf, [241, 245, 249]);  pdf.rect(M, y, CW, 5, 'F');
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(6);  tc(pdf, S500);
-  if (multiGroup) {
-    pdf.text('(Amount in Rs.)', colX[2] + colW[2] - 3, y + 3.5, { align: 'right' });
-    pdf.text('(Amount in Rs.)', colX[3] + colW[3] - 3, y + 3.5, { align: 'right' });
-  } else {
-    pdf.text('(Amount in Rs.)', colX[1] + colW[1] - 3, y + 3.5, { align: 'right' });
-    pdf.text('(Amount in Rs.)', colX[2] + colW[2] - 3, y + 3.5, { align: 'right' });
-  }
-  pdf.text('(Dr = Due)', RIGHT - 3, y + 3.5, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(5.5);  tc(pdf, S500);
+  pdf.text('(Rs.)', colX[5] + colW[5] - 2, y + 3.5, { align: 'right' });
+  pdf.text('(Rs.)', colX[6] + colW[6] - 2, y + 3.5, { align: 'right' });
+  pdf.text('Dr=Due', RIGHT - 2, y + 3.5, { align: 'right' });
   y += 5;
 
-  // Data rows
-  summaries.forEach((s, idx) => {
+  // Transaction rows
+  entries.forEach((entry, idx) => {
     if (y + ROW_H > 275) { pdf.addPage(); y = M; }
 
     const rowBg: RGB = idx % 2 === 0 ? WHT : [248, 250, 252];
     fc(pdf, rowBg);  pdf.rect(M, y, CW, ROW_H, 'F');
     dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.15);
     pdf.line(M + 2, y + ROW_H, M + CW - 2, y + ROW_H);
-
     const midY = y + ROW_H / 2 + 1.5;
+    const isInv = entry.type === 'invoice';
 
-    if (multiGroup) {
-      // Client name
-      pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8);  tc(pdf, S800);
-      const nameStr = s.clientName.length > 20 ? s.clientName.slice(0, 18) + '…' : s.clientName;
-      pdf.text(nameStr, colX[0] + 4, midY);
-      // Group name (muted)
-      pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S500);
-      const grpStr = (s.groupName || '—').length > 14 ? (s.groupName || '').slice(0, 12) + '…' : (s.groupName || '—');
-      pdf.text(grpStr, colX[1] + 4, midY);
-      // Invoiced
-      pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, IDIG);
-      pdf.text(inr(s.totalInvoiced, 2), colX[2] + colW[2] - 3, midY, { align: 'right' });
-      // Received
-      tc(pdf, GREE);
-      pdf.text(inr(s.totalReceived, 2), colX[3] + colW[3] - 3, midY, { align: 'right' });
+    // Client name
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, S800);
+    const nm = entry.clientName.length > 15 ? entry.clientName.slice(0, 14) + '…' : entry.clientName;
+    pdf.text(nm, colX[0] + 2, midY);
+
+    // Invoice Date | Invoice #
+    pdf.setFont('helvetica', isInv ? 'bold' : 'normal');  pdf.setFontSize(7);
+    tc(pdf, isInv ? IDIG : S300);
+    pdf.text(isInv ? fmtDate(entry.date) : '—', colX[1] + 2, midY);
+    pdf.text(isInv ? (entry.ref || '—') : '—',  colX[2] + 2, midY);
+
+    // Receipt Date | Receipt #
+    pdf.setFont('helvetica', !isInv ? 'bold' : 'normal');
+    tc(pdf, !isInv ? GREE : S300);
+    pdf.text(!isInv ? fmtDate(entry.date) : '—', colX[3] + 2, midY);
+    pdf.text(!isInv ? (entry.ref || '—') : '—',  colX[4] + 2, midY);
+
+    // Debit
+    if (isInv) {
+      pdf.setFont('helvetica', 'bold');  tc(pdf, ROSE);
+      pdf.text(inr(entry.amount, 2), colX[5] + colW[5] - 2, midY, { align: 'right' });
     } else {
-      // Client name
-      pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, S800);
-      const nameStr = s.clientName.length > 36 ? s.clientName.slice(0, 34) + '…' : s.clientName;
-      pdf.text(nameStr, colX[0] + 4, midY);
-      // Invoiced
-      pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);  tc(pdf, IDIG);
-      pdf.text(inr(s.totalInvoiced, 2), colX[1] + colW[1] - 3, midY, { align: 'right' });
-      // Received
-      tc(pdf, GREE);
-      pdf.text(inr(s.totalReceived, 2), colX[2] + colW[2] - 3, midY, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');  tc(pdf, S300);
+      pdf.text('—', colX[5] + colW[5] - 2, midY, { align: 'right' });
     }
 
-    // Outstanding (shared for both layouts)
-    const outColor: RGB = s.outstanding >= 0 ? ROSE : GREE;
-    const outTxt = inr(Math.abs(s.outstanding), 2) + (s.outstanding > 0 ? '  Dr' : s.outstanding < 0 ? '  Cr' : '');
-    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, outColor);
-    pdf.text(outTxt, RIGHT - 3, midY, { align: 'right' });
+    // Credit
+    if (!isInv) {
+      pdf.setFont('helvetica', 'bold');  tc(pdf, GREE);
+      pdf.text(inr(entry.amount, 2), colX[6] + colW[6] - 2, midY, { align: 'right' });
+    } else {
+      pdf.setFont('helvetica', 'normal');  tc(pdf, S300);
+      pdf.text('—', colX[6] + colW[6] - 2, midY, { align: 'right' });
+    }
+
+    // Balance
+    const balColor: RGB = entry.balance >= 0 ? ROSE : GREE;
+    const balTxt = inr(Math.abs(entry.balance), 2) + (entry.balance > 0 ? ' Dr' : entry.balance < 0 ? ' Cr' : '');
+    pdf.setFont('helvetica', 'bold');  tc(pdf, balColor);
+    pdf.text(balTxt, RIGHT - 2, midY, { align: 'right' });
 
     y += ROW_H;
   });
 
-  if (summaries.length === 0) {
+  if (entries.length === 0) {
     pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, S500);
-    pdf.text('No clients selected.', W / 2, y + 8, { align: 'center' });
+    pdf.text('No transactions found.', W / 2, y + 8, { align: 'center' });
     y += 16;
   }
 
-  // Grand total row (dark rounded bottom strip)
+  // Grand total strip
   if (y + ROW_H + 2 > 275) { pdf.addPage(); y = M; }
   y += 1;
-  fc(pdf, S800);  pdf.roundedRect(M, y, CW, ROW_H + 2, 3, 3, 'F');
-  pdf.rect(M, y, CW, (ROW_H + 2) / 2, 'F'); // flush top
-
-  const gtY = y + (ROW_H + 2) / 2 + 2;
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, WHT);
-  pdf.text('GRAND TOTAL', colX[0] + 4, gtY);
-  if (multiGroup) {
-    pdf.text(inr(grandInv, 2), colX[2] + colW[2] - 3, gtY, { align: 'right' });
-    pdf.text(inr(grandRec, 2), colX[3] + colW[3] - 3, gtY, { align: 'right' });
-  } else {
-    pdf.text(inr(grandInv, 2), colX[1] + colW[1] - 3, gtY, { align: 'right' });
-    pdf.text(inr(grandRec, 2), colX[2] + colW[2] - 3, gtY, { align: 'right' });
-  }
+  fc(pdf, S800);  pdf.roundedRect(M, y, CW, ROW_H + 1, 3, 3, 'F');
+  pdf.rect(M, y, CW, (ROW_H + 1) / 2, 'F');
+  const gtY = y + (ROW_H + 1) / 2 + 2;
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
+  pdf.text('GRAND TOTAL', colX[0] + 2, gtY);
+  pdf.text(inr(grandInv, 2), colX[5] + colW[5] - 2, gtY, { align: 'right' });
+  pdf.text(inr(grandRec, 2), colX[6] + colW[6] - 2, gtY, { align: 'right' });
   const outTxt = inr(Math.abs(grandOut), 2) + (grandOut > 0 ? '  Dr' : grandOut < 0 ? '  Cr' : '');
-  pdf.text(outTxt, RIGHT - 3, gtY, { align: 'right' });
+  pdf.text(outTxt, RIGHT - 2, gtY, { align: 'right' });
 
   y += ROW_H + 10;
 
