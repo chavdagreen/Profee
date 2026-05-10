@@ -25,7 +25,7 @@ const EMR:  RGB = [16,  185, 129];
 // ─── Utility ─────────────────────────────────────────────────────────────────
 
 function inr(n: number, decimals = 0): string {
-  return '₹' + (n || 0).toLocaleString('en-IN', {
+  return 'Rs.' + (n || 0).toLocaleString('en-IN', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -229,8 +229,9 @@ export async function generateInvoicePDF(invoice: Invoice, settings: BillingSett
   // Fill lower half flush (only top-left/top-right rounded on real invoice, approximate with full round)
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
   COLS.forEach((col, i) => {
+    const isLast = i === COLS.length - 1;
     const tx = col.align === 'right'
-      ? CX[i] + col.w - 3
+      ? (isLast ? M + CW : CX[i] + col.w - 2)
       : col.align === 'center'
       ? CX[i] + col.w / 2
       : CX[i] + (i === 0 ? 3 : 2);
@@ -286,12 +287,13 @@ export async function generateInvoicePDF(invoice: Invoice, settings: BillingSett
       const colIdx = ci + 1;
       const col = COLS[colIdx];
       const cx  = CX[colIdx];
+      const isLast = colIdx === COLS.length - 1;
       const tx  = col.align === 'right'
-        ? cx + col.w - 3
+        ? (isLast ? M + CW : cx + col.w - 2)
         : col.align === 'center'
         ? cx + col.w / 2
         : cx + 2;
-      pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);
       tc(pdf, col.align === 'center' ? S500 : S800);
       pdf.text(val, tx, midY, { align: col.align });
     });
@@ -365,24 +367,25 @@ export async function generateInvoicePDF(invoice: Invoice, settings: BillingSett
     ['SGST',                   inr(invoice.sgstTotal   || 0), false],
   ];
 
+  const RIGHT = M + CW; // true right margin anchor (196mm)
   totRows.forEach(([label, val, isDiscount]) => {
     pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);
     tc(pdf, S500);  pdf.text(label, TOT_X, ty);
     tc(pdf, isDiscount ? EMR : S800);
-    pdf.text(val, TOT_X + TOT_W, ty, { align: 'right' });
+    pdf.text(val, RIGHT, ty, { align: 'right' });
     ty += 7;
   });
 
   // Grand total
   dc(pdf, THM);  pdf.setLineWidth(1.2);
-  pdf.line(TOT_X, ty, TOT_X + TOT_W, ty);
+  pdf.line(TOT_X, ty, RIGHT, ty);
   ty += 4;
 
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(15);  tc(pdf, S800);
-  pdf.text('Total', TOT_X, ty + 8);
-  pdf.setFontSize(22);
-  pdf.text(inr(invoice.total || 0), TOT_X + TOT_W, ty + 8, { align: 'right' });
-  ty += 15;
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(13);  tc(pdf, S800);
+  pdf.text('Total', TOT_X, ty + 7);
+  pdf.setFontSize(16);
+  pdf.text(inr(invoice.total || 0), M + CW, ty + 7, { align: 'right' });
+  ty += 13;
 
   // Amount in words
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(6.5);  tc(pdf, S300);
@@ -525,7 +528,7 @@ export async function generateReceiptPDF(receipt: Receipt, settings: BillingSett
   fc(pdf, GRN);  pdf.roundedRect(M, y, CW, 28, 3, 3, 'F');
   pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, [209, 250, 229]);
   pdf.text('AMOUNT RECEIVED', M + 8, y + 9);
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(28);  tc(pdf, WHT);
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(22);  tc(pdf, WHT);
   pdf.text(inr(receipt.amount || 0), M + 8, y + 22);
 
   y += 36;
@@ -616,7 +619,7 @@ export function generateClientLedgerPDF(
 
   fc(pdf, S800);  pdf.rect(M, y, CW, 8, 'F');
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
-  const hdrs = ['Date', 'Reference', 'Description', 'Debit (₹)', 'Credit (₹)', 'Balance (₹)'];
+  const hdrs = ['Date', 'Reference', 'Description', 'Debit (Rs.)', 'Credit (Rs.)', 'Balance (Rs.)'];
   const hAl: Align[] = ['left', 'left', 'left', 'right', 'right', 'right'];
   hdrs.forEach((h, i) => {
     const hx = i < 5
