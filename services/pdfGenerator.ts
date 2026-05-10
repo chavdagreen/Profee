@@ -686,13 +686,12 @@ export function generateClientLedgerPDF(
   y += 24;
 
   // ── Table ────────────────────────────────────────────────────────────────────
-  // Columns: Inv.Date(22) Invoice#(26) Rcpt.Date(22) Receipt#(26) Debit(28) Credit(28) Balance(30) = 182
-  const colW   = [22, 26, 22, 26, 28, 28, 30];
+  // Sr.#(8) Date(22) Invoice#(28) Receipt#(28) Debit(30) Credit(30) Balance(36) = 182
+  const colW   = [8, 22, 28, 28, 30, 30, 36];
   const colX: number[] = [M];
   colW.slice(0, -1).forEach((w, i) => colX.push(colX[i] + w));
   const RIGHT  = M + CW;
 
-  // Table container (rounded)
   const ROW_H  = 9;
   const HDR_H  = 8;
   const SUB_H  = 5;
@@ -704,15 +703,13 @@ export function generateClientLedgerPDF(
   fc(pdf, S800);  pdf.roundedRect(M, y, CW, HDR_H, 3, 3, 'F');
   pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F');
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, WHT);
-  const hdrs  = ['Inv. Date', 'Invoice #', 'Rcpt. Date', 'Receipt #', 'Debit', 'Credit', 'Balance'];
-  const hAl: Align[] = ['left', 'left', 'left', 'left', 'right', 'right', 'right'];
-  hdrs.forEach((h, i) => {
-    const isLast = i === hdrs.length - 1;
-    const tx = hAl[i] === 'right'
-      ? (isLast ? RIGHT - 2 : colX[i] + colW[i] - 2)
-      : colX[i] + 2;
-    pdf.text(h, tx, y + 5.5, { align: hAl[i] });
-  });
+  pdf.text('#',           colX[0] + colW[0] / 2, y + 5.5, { align: 'center' });
+  pdf.text('Date',        colX[1] + 2,            y + 5.5);
+  pdf.text('Invoice #',   colX[2] + 2,            y + 5.5);
+  pdf.text('Receipt #',   colX[3] + 2,            y + 5.5);
+  pdf.text('Debit',       colX[4] + colW[4] - 2,  y + 5.5, { align: 'right' });
+  pdf.text('Credit',      colX[5] + colW[5] - 2,  y + 5.5, { align: 'right' });
+  pdf.text('Balance',     RIGHT - 2,               y + 5.5, { align: 'right' });
   y += HDR_H;
 
   // Sub-label row
@@ -735,17 +732,24 @@ export function generateClientLedgerPDF(
     const midY = y + ROW_H / 2 + 1.5;
     const isInv = entry.type === 'invoice';
 
-    // Invoice Date | Invoice # (filled only for invoices)
-    pdf.setFont('helvetica', isInv ? 'bold' : 'normal');  pdf.setFontSize(7.5);
-    tc(pdf, isInv ? IDIG : S300);
-    pdf.text(isInv ? fmtDate(entry.date) : '—', colX[0] + 2, midY);
-    pdf.text(isInv ? (entry.ref || '—') : '—',  colX[1] + 2, midY);
+    // Sr.#
+    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(6.5);  tc(pdf, S300);
+    pdf.text(String(idx + 1), colX[0] + colW[0] / 2, midY, { align: 'center' });
 
-    // Receipt Date | Receipt # (filled only for receipts)
-    tc(pdf, !isInv ? GREE : S300);
+    // Date — single merged column, colored by type
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);
+    tc(pdf, isInv ? IDIG : GREE);
+    pdf.text(fmtDate(entry.date), colX[1] + 2, midY);
+
+    // Invoice #
+    pdf.setFont('helvetica', isInv ? 'bold' : 'normal');
+    tc(pdf, isInv ? IDIG : S300);
+    pdf.text(isInv ? (entry.ref || '—') : '—', colX[2] + 2, midY);
+
+    // Receipt #
     pdf.setFont('helvetica', !isInv ? 'bold' : 'normal');
-    pdf.text(!isInv ? fmtDate(entry.date) : '—', colX[2] + 2, midY);
-    pdf.text(!isInv ? (entry.ref || '—') : '—',  colX[3] + 2, midY);
+    tc(pdf, !isInv ? GREE : S300);
+    pdf.text(!isInv ? (entry.ref || '—') : '—', colX[3] + 2, midY);
 
     // Debit
     if (isInv) {
@@ -786,7 +790,7 @@ export function generateClientLedgerPDF(
     const closingBal = entries[entries.length - 1]?.balance ?? 0;
     const closingTxt = inr(Math.abs(closingBal), 2) + (closingBal > 0 ? ' Dr' : closingBal < 0 ? ' Cr' : '');
     pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
-    pdf.text('CLOSING BALANCE', colX[0] + 2, y + ROW_H / 2 + 1.5);
+    pdf.text('CLOSING BALANCE', colX[1] + 2, y + ROW_H / 2 + 1.5);
     pdf.text(closingTxt, RIGHT - 2, y + ROW_H / 2 + 1.5, { align: 'right' });
     y += ROW_H;
   }
@@ -885,8 +889,8 @@ export function generateGroupLedgerPDF(
   y += CARD_H + 8;
 
   // ── 3. Detailed transaction table ────────────────────────────────────────────
-  // Columns: Client(34) Inv.Date(20) Invoice#(22) Rcpt.Date(20) Receipt#(22) Debit(22) Credit(22) Balance(20) = 182
-  const colW  = [34, 20, 22, 20, 22, 22, 22, 20];
+  // Sr.#(8) Client(46) Date(22) Invoice#(24) Receipt#(24) Debit(22) Credit(22) Balance(14) = 182
+  const colW  = [8, 46, 22, 24, 24, 22, 22, 14];
   const colX: number[] = [M];
   colW.slice(0, -1).forEach((w, i) => colX.push(colX[i] + w));
   const RIGHT = M + CW;
@@ -897,27 +901,28 @@ export function generateGroupLedgerPDF(
   fc(pdf, WHT);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.4);
   pdf.roundedRect(M, y, CW, Math.min(HDR_H + 5 + entries.length * ROW_H + ROW_H + 2, 255 - y), 3, 3, 'FD');
 
-  // Header
+  // Header row
   fc(pdf, S800);  pdf.roundedRect(M, y, CW, HDR_H, 3, 3, 'F');
   pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F');
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(6.5);  tc(pdf, WHT);
-  const grpHdrs = ['Client', 'Inv. Date', 'Invoice #', 'Rcpt. Date', 'Receipt #', 'Debit', 'Credit', 'Balance'];
-  const grpAl = ['left','left','left','left','left','right','right','right'] as const;
-  grpHdrs.forEach((h, i) => {
-    const isLast = i === grpHdrs.length - 1;
-    const tx = grpAl[i] === 'right'
-      ? (isLast ? RIGHT - 2 : colX[i] + colW[i] - 2)
-      : colX[i] + 2;
-    pdf.text(h, tx, y + 5.3, { align: grpAl[i] });
-  });
+  // Sr.# (center), Client (left), Date (left), Invoice# (left), Receipt# (left),
+  // Debit (right), Credit (right), Balance (right)
+  pdf.text('#',          colX[0] + colW[0] / 2, y + 5.3, { align: 'center' });
+  pdf.text('Client',     colX[1] + 2,            y + 5.3);
+  pdf.text('Date',       colX[2] + 2,            y + 5.3);
+  pdf.text('Invoice #',  colX[3] + 2,            y + 5.3);
+  pdf.text('Receipt #',  colX[4] + 2,            y + 5.3);
+  pdf.text('Debit',      colX[5] + colW[5] - 2,  y + 5.3, { align: 'right' });
+  pdf.text('Credit',     colX[6] + colW[6] - 2,  y + 5.3, { align: 'right' });
+  pdf.text('Balance',    RIGHT - 2,               y + 5.3, { align: 'right' });
   y += HDR_H;
 
   // Sub-label row
   fc(pdf, [241, 245, 249]);  pdf.rect(M, y, CW, 5, 'F');
   pdf.setFont('helvetica', 'normal');  pdf.setFontSize(5.5);  tc(pdf, S500);
-  pdf.text('(Rs.)', colX[5] + colW[5] - 2, y + 3.5, { align: 'right' });
-  pdf.text('(Rs.)', colX[6] + colW[6] - 2, y + 3.5, { align: 'right' });
-  pdf.text('Dr=Due', RIGHT - 2, y + 3.5, { align: 'right' });
+  pdf.text('(Rs.)',  colX[5] + colW[5] - 2, y + 3.5, { align: 'right' });
+  pdf.text('(Rs.)',  colX[6] + colW[6] - 2, y + 3.5, { align: 'right' });
+  pdf.text('Dr=Due', RIGHT - 2,              y + 3.5, { align: 'right' });
   y += 5;
 
   // Transaction rows
@@ -931,22 +936,32 @@ export function generateGroupLedgerPDF(
     const midY = y + ROW_H / 2 + 1.5;
     const isInv = entry.type === 'invoice';
 
-    // Client name
+    // Sr. number (muted, centered)
+    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(6.5);  tc(pdf, S300);
+    pdf.text(String(idx + 1), colX[0] + colW[0] / 2, midY, { align: 'center' });
+
+    // Client name — full, no truncation (46mm wide, 7pt fits ~28 chars)
     pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, S800);
-    const nm = entry.clientName.length > 15 ? entry.clientName.slice(0, 14) + '…' : entry.clientName;
-    pdf.text(nm, colX[0] + 2, midY);
+    const maxChars = 26;
+    const nm = entry.clientName.length > maxChars
+      ? entry.clientName.slice(0, maxChars - 1) + '…'
+      : entry.clientName;
+    pdf.text(nm, colX[1] + 2, midY);
 
-    // Invoice Date | Invoice #
-    pdf.setFont('helvetica', isInv ? 'bold' : 'normal');  pdf.setFontSize(7);
+    // Date — single column, colored by type
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);
+    tc(pdf, isInv ? IDIG : GREE);
+    pdf.text(fmtDate(entry.date), colX[2] + 2, midY);
+
+    // Invoice # (filled for invoices, — for receipts)
+    pdf.setFont('helvetica', isInv ? 'bold' : 'normal');
     tc(pdf, isInv ? IDIG : S300);
-    pdf.text(isInv ? fmtDate(entry.date) : '—', colX[1] + 2, midY);
-    pdf.text(isInv ? (entry.ref || '—') : '—',  colX[2] + 2, midY);
+    pdf.text(isInv ? (entry.ref || '—') : '—', colX[3] + 2, midY);
 
-    // Receipt Date | Receipt #
+    // Receipt # (filled for receipts, — for invoices)
     pdf.setFont('helvetica', !isInv ? 'bold' : 'normal');
     tc(pdf, !isInv ? GREE : S300);
-    pdf.text(!isInv ? fmtDate(entry.date) : '—', colX[3] + 2, midY);
-    pdf.text(!isInv ? (entry.ref || '—') : '—',  colX[4] + 2, midY);
+    pdf.text(!isInv ? (entry.ref || '—') : '—', colX[4] + 2, midY);
 
     // Debit
     if (isInv) {
@@ -968,9 +983,17 @@ export function generateGroupLedgerPDF(
 
     // Balance
     const balColor: RGB = entry.balance >= 0 ? ROSE : GREE;
-    const balTxt = inr(Math.abs(entry.balance), 2) + (entry.balance > 0 ? ' Dr' : entry.balance < 0 ? ' Cr' : '');
+    const balTxt = inr(Math.abs(entry.balance), 2) + (entry.balance > 0 ? '\nDr' : entry.balance < 0 ? '\nCr' : '');
     pdf.setFont('helvetica', 'bold');  tc(pdf, balColor);
-    pdf.text(balTxt, RIGHT - 2, midY, { align: 'right' });
+    // Balance on two lines if needed (amount on top, Dr/Cr tag below)
+    const balAmt = inr(Math.abs(entry.balance), 2);
+    const balTag = entry.balance > 0 ? 'Dr' : entry.balance < 0 ? 'Cr' : '';
+    pdf.setFontSize(6.5);
+    pdf.text(balAmt, RIGHT - 2, midY - 1, { align: 'right' });
+    if (balTag) {
+      pdf.setFontSize(5.5);  tc(pdf, balColor);
+      pdf.text(balTag, RIGHT - 2, midY + 3, { align: 'right' });
+    }
 
     y += ROW_H;
   });
@@ -988,7 +1011,7 @@ export function generateGroupLedgerPDF(
   pdf.rect(M, y, CW, (ROW_H + 1) / 2, 'F');
   const gtY = y + (ROW_H + 1) / 2 + 2;
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
-  pdf.text('GRAND TOTAL', colX[0] + 2, gtY);
+  pdf.text('GRAND TOTAL', colX[1] + 2, gtY);
   pdf.text(inr(grandInv, 2), colX[5] + colW[5] - 2, gtY, { align: 'right' });
   pdf.text(inr(grandRec, 2), colX[6] + colW[6] - 2, gtY, { align: 'right' });
   const outTxt = inr(Math.abs(grandOut), 2) + (grandOut > 0 ? '  Dr' : grandOut < 0 ? '  Cr' : '');
