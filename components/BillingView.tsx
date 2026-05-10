@@ -89,10 +89,10 @@ const BillingView: React.FC<BillingViewProps> = ({
   }, [prefill]);
 
   // ============ PDF DOWNLOAD HANDLERS ============
-  const handleDownloadInvoicePDF = (invoice: Invoice) => {
+  const handleDownloadInvoicePDF = async (invoice: Invoice) => {
     setIsDownloading(true);
     try {
-      generateInvoicePDF(invoice, settings);
+      await generateInvoicePDF(invoice, settings);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(err.message || 'Error generating PDF. Please try again.');
@@ -101,10 +101,10 @@ const BillingView: React.FC<BillingViewProps> = ({
     }
   };
 
-  const handleDownloadReceiptPDF = (receipt: Receipt) => {
+  const handleDownloadReceiptPDF = async (receipt: Receipt) => {
     setIsDownloading(true);
     try {
-      generateReceiptPDF(receipt, settings);
+      await generateReceiptPDF(receipt, settings);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(err.message || 'Error generating PDF. Please try again.');
