@@ -747,63 +747,165 @@ export function generateGroupLedgerPDF(
   const pdf  = new jsPDF('p', 'mm', 'a4');
   const W    = 210;
   const M    = 14;
-  const CW   = W - M * 2;
-  const ROSE: RGB = [225, 29,  72];
+  const CW   = W - M * 2;   // 182 mm
+  const ROSE: RGB = [220, 38,  38];
   const GREE: RGB = [5,   150, 105];
-  let y      = 0;
+  const IDIG: RGB = [99,  102, 241]; // indigo accent
 
-  fc(pdf, S800);  pdf.rect(0, 0, W, 32, 'F');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(18);  tc(pdf, WHT);
-  pdf.text('GROUP LEDGER SUMMARY', M, 16);
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);
-  pdf.text(practiceName, M, 25);
-  pdf.text(`${dateFrom || 'All time'} to ${dateTo || 'Present'}`, W - M, 25, { align: 'right' });
+  // ── 1. Header ───────────────────────────────────────────────────────────────
+  // Thin accent bar at top
+  fc(pdf, IDIG);  pdf.rect(0, 0, W, 2, 'F');
 
-  y = 42;
+  let y = 12;
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(22);  tc(pdf, S800);
+  pdf.text('GROUP LEDGER', M, y);
 
-  // Header
-  fc(pdf, S800);  pdf.rect(M, y, CW, 8, 'F');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8);  tc(pdf, WHT);
-  const colW = [CW * 0.4, CW * 0.2, CW * 0.2, CW * 0.2];
-  const cxs  = [M, M + colW[0], M + colW[0] + colW[1], M + colW[0] + colW[1] + colW[2]];
-  pdf.text('Client Name', cxs[0] + 3, y + 5.5);
-  pdf.text('Invoiced (₹)',    cxs[1] + colW[1] - 2, y + 5.5, { align: 'right' });
-  pdf.text('Received (₹)',    cxs[2] + colW[2] - 2, y + 5.5, { align: 'right' });
-  pdf.text('Outstanding (₹)', cxs[3] + colW[3] - 2, y + 5.5, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(10);  tc(pdf, S500);
+  pdf.text('Summary', M, y + 7);
+
+  // Right: practice + period
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(10);  tc(pdf, S800);
+  pdf.text(practiceName, W - M, y, { align: 'right' });
+
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, S500);
+  const period = dateFrom
+    ? `${dateFrom}  to  ${dateTo || 'Present'}`
+    : `All time  to  ${dateTo || new Date().toLocaleDateString('en-IN')}`;
+  pdf.text(period, W - M, y + 7, { align: 'right' });
+
+  // Thin separator
+  y += 13;
+  dc(pdf, S100);  pdf.setLineWidth(0.4);  pdf.line(M, y, M + CW, y);
   y += 8;
 
-  let gInv = 0, gRec = 0;
-  summaries.forEach((s, idx) => {
-    if (y + 9 > 272) { pdf.addPage(); y = 16; }
-    const rowBg: RGB = idx % 2 === 0 ? WHT : [249, 250, 251];
-    fc(pdf, rowBg);  pdf.rect(M, y, CW, 9, 'F');
-    dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.2);  pdf.line(M, y + 9, M + CW, y + 9);
+  // ── 2. Summary stat cards ────────────────────────────────────────────────────
+  const grandInv  = summaries.reduce((s, r) => s + r.totalInvoiced, 0);
+  const grandRec  = summaries.reduce((s, r) => s + r.totalReceived, 0);
+  const grandOut  = grandInv - grandRec;
 
-    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);
-    tc(pdf, S800);  pdf.text(s.clientName, cxs[0] + 3, y + 6);
-    tc(pdf, ROSE);  pdf.text(inr(s.totalInvoiced, 2), cxs[1] + colW[1] - 2, y + 6, { align: 'right' });
-    tc(pdf, GREE);  pdf.text(inr(s.totalReceived, 2), cxs[2] + colW[2] - 2, y + 6, { align: 'right' });
-    tc(pdf, s.outstanding >= 0 ? ROSE : GREE);
-    pdf.text(
-      inr(Math.abs(s.outstanding), 2) + (s.outstanding >= 0 ? ' Dr' : ' Cr'),
-      cxs[3] + colW[3] - 2, y + 6, { align: 'right' }
-    );
-    gInv += s.totalInvoiced;  gRec += s.totalReceived;
-    y += 9;
+  const CARD_W = (CW - 8) / 3;
+  const CARD_H = 24;
+  const cards: [string, string, RGB, RGB][] = [
+    ['TOTAL INVOICED',  inr(grandInv, 2), [239, 242, 255], IDIG],
+    ['TOTAL RECEIVED',  inr(grandRec, 2), [236, 253, 245], GREE],
+    ['OUTSTANDING',     inr(Math.abs(grandOut), 2) + (grandOut > 0 ? '  Dr' : grandOut < 0 ? '  Cr' : ''),
+     grandOut > 0 ? [255, 241, 242] : [236, 253, 245],
+     grandOut > 0 ? ROSE : GREE],
+  ];
+
+  cards.forEach(([label, val, bg, accent], i) => {
+    const cx = M + i * (CARD_W + 4);
+    fc(pdf, bg as RGB);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.3);
+    pdf.roundedRect(cx, y, CARD_W, CARD_H, 3, 3, 'FD');
+
+    // Left accent bar inside card
+    fc(pdf, accent as RGB);  pdf.roundedRect(cx, y, 2.5, CARD_H, 1.5, 1.5, 'F');
+    pdf.rect(cx + 1.5, y, 1, CARD_H, 'F'); // flush right side of accent
+
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(6.5);  tc(pdf, S500);
+    pdf.text(label, cx + 6, y + 7);
+
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(11);  tc(pdf, accent as RGB);
+    pdf.text(val, cx + 6, y + 18);
   });
 
-  // Grand total
-  y += 2;
-  if (y + 12 > 272) { pdf.addPage(); y = 16; }
-  fc(pdf, S800);  pdf.rect(M, y, CW, 11, 'F');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);  tc(pdf, WHT);
-  pdf.text('GRAND TOTAL', cxs[0] + 3, y + 7.5);
-  pdf.text(inr(gInv, 2), cxs[1] + colW[1] - 2, y + 7.5, { align: 'right' });
-  pdf.text(inr(gRec, 2), cxs[2] + colW[2] - 2, y + 7.5, { align: 'right' });
-  const gOut = gInv - gRec;
+  y += CARD_H + 10;
+
+  // ── 3. Table ─────────────────────────────────────────────────────────────────
+  // Column definitions (widths sum to CW = 182)
+  const colW  = [82, 32, 32, 36];   // Client | Invoiced | Received | Outstanding
+  const colX  = [M, M + colW[0], M + colW[0] + colW[1], M + colW[0] + colW[1] + colW[2]];
+  const RIGHT = M + CW;             // true right margin
+
+  // Draw table container (large rounded rect)
+  const tableTopY = y;
+  const estRows   = summaries.length + 1; // +1 for grand total
+  const ROW_H     = 10;
+  const HDR_H     = 9;
+  const tableH    = HDR_H + estRows * ROW_H + 1;
+
+  fc(pdf, WHT);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.4);
+  pdf.roundedRect(M, tableTopY, CW, Math.min(tableH, 240 - tableTopY), 3, 3, 'FD');
+
+  // Header row (slate-800 fill, rounded top via overlap)
+  fc(pdf, S800);  pdf.roundedRect(M, y, CW, HDR_H, 3, 3, 'F');
+  pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F'); // flush bottom half
+
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
+  pdf.text('Client Name',   colX[0] + 4,  y + 6);
+  pdf.text('Invoiced',      colX[1] + colW[1] - 3,  y + 6, { align: 'right' });
+  pdf.text('Received',      colX[2] + colW[2] - 3,  y + 6, { align: 'right' });
+  pdf.text('Outstanding',   RIGHT - 3,               y + 6, { align: 'right' });
+  y += HDR_H;
+
+  // Sub-label row (tiny Rs. unit labels)
+  fc(pdf, [241, 245, 249]);  pdf.rect(M, y, CW, 5, 'F');
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(6);  tc(pdf, S500);
+  pdf.text('(Amount in Rs.)', colX[1] + colW[1] - 3, y + 3.5, { align: 'right' });
+  pdf.text('(Amount in Rs.)', colX[2] + colW[2] - 3, y + 3.5, { align: 'right' });
+  pdf.text('(Dr = Due)',       RIGHT - 3,              y + 3.5, { align: 'right' });
+  y += 5;
+
+  // Data rows
+  summaries.forEach((s, idx) => {
+    if (y + ROW_H > 275) { pdf.addPage(); y = M; }
+
+    const rowBg: RGB = idx % 2 === 0 ? WHT : [248, 250, 252];
+    fc(pdf, rowBg);  pdf.rect(M, y, CW, ROW_H, 'F');
+    dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.15);
+    pdf.line(M + 2, y + ROW_H, M + CW - 2, y + ROW_H);
+
+    const midY = y + ROW_H / 2 + 1.5;
+
+    // Client name
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, S800);
+    const nameStr = s.clientName.length > 36 ? s.clientName.slice(0, 34) + '…' : s.clientName;
+    pdf.text(nameStr, colX[0] + 4, midY);
+
+    // Invoiced (indigo)
+    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);  tc(pdf, IDIG);
+    pdf.text(inr(s.totalInvoiced, 2), colX[1] + colW[1] - 3, midY, { align: 'right' });
+
+    // Received (green)
+    tc(pdf, GREE);
+    pdf.text(inr(s.totalReceived, 2), colX[2] + colW[2] - 3, midY, { align: 'right' });
+
+    // Outstanding (rose if Dr, green if Cr)
+    const outColor: RGB = s.outstanding >= 0 ? ROSE : GREE;
+    const outTxt = inr(Math.abs(s.outstanding), 2) + (s.outstanding > 0 ? '  Dr' : s.outstanding < 0 ? '  Cr' : '');
+    pdf.setFont('helvetica', 'bold');  tc(pdf, outColor);
+    pdf.text(outTxt, RIGHT - 3, midY, { align: 'right' });
+
+    y += ROW_H;
+  });
+
+  if (summaries.length === 0) {
+    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, S500);
+    pdf.text('No clients selected.', W / 2, y + 8, { align: 'center' });
+    y += 16;
+  }
+
+  // Grand total row (dark rounded bottom strip)
+  if (y + ROW_H + 2 > 275) { pdf.addPage(); y = M; }
+  y += 1;
+  fc(pdf, S800);  pdf.roundedRect(M, y, CW, ROW_H + 2, 3, 3, 'F');
+  pdf.rect(M, y, CW, (ROW_H + 2) / 2, 'F'); // flush top
+
+  const gtY = y + (ROW_H + 2) / 2 + 2;
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, WHT);
+  pdf.text('GRAND TOTAL', colX[0] + 4, gtY);
+  pdf.text(inr(grandInv, 2), colX[1] + colW[1] - 3, gtY, { align: 'right' });
+  pdf.text(inr(grandRec, 2), colX[2] + colW[2] - 3, gtY, { align: 'right' });
+  const outTxt = inr(Math.abs(grandOut), 2) + (grandOut > 0 ? '  Dr' : grandOut < 0 ? '  Cr' : '');
+  pdf.text(outTxt, RIGHT - 3, gtY, { align: 'right' });
+
+  y += ROW_H + 10;
+
+  // ── 4. Generated date note ───────────────────────────────────────────────────
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S300);
   pdf.text(
-    inr(Math.abs(gOut), 2) + (gOut >= 0 ? ' Dr' : ' Cr'),
-    cxs[3] + colW[3] - 2, y + 7.5, { align: 'right' }
+    `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}  |  ${practiceName}`,
+    W / 2, y, { align: 'center' }
   );
 
   addFooterWatermark(pdf);
