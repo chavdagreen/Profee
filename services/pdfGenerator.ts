@@ -466,97 +466,145 @@ export async function generateInvoicePDF(invoice: Invoice, settings: BillingSett
 export async function generateReceiptPDF(receipt: Receipt, settings: BillingSettings): Promise<void> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const W   = 210;
-  const M   = 20;
-  const CW  = W - M * 2;
+  const M   = 14;
+  const CW  = W - M * 2;   // 182 mm
   const GRN: RGB = [5, 150, 105];
+  const LGN: RGB = [209, 250, 229];
 
-  let y = M;
+  // ── 1. Header bar (52 mm, all text safely inside) ──────────────────────────
+  const HDR_H = 52;
+  fc(pdf, GRN);  pdf.rect(0, 0, W, HDR_H, 'F');
 
-  // ── Header ──
-  fc(pdf, GRN);  pdf.rect(0, 0, W, 40, 'F');
+  // Left: title + subtitle
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(24);  tc(pdf, WHT);
+  pdf.text('PAYMENT RECEIPT', M, 20);
 
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(22);  tc(pdf, WHT);
-  pdf.text('PAYMENT RECEIPT', M, y + 14);
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);  tc(pdf, LGN);
+  pdf.text('Official Confirmation of Payment', M, 29);
 
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, [209, 250, 229]);
-  pdf.text('Official Confirmation of Payment', M, y + 22);
-
+  // Right: practice name, receipt#, date
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(11);  tc(pdf, WHT);
-  pdf.text(settings.practiceName.toUpperCase(), W - M, y + 10, { align: 'right' });
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, [209, 250, 229]);
-  pdf.text(`Ref: ${receipt.receiptNumber}`, W - M, y + 18, { align: 'right' });
+  pdf.text(settings.practiceName.toUpperCase(), W - M, 16, { align: 'right' });
 
-  y = 52;
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, LGN);
+  pdf.text(`Receipt No: ${receipt.receiptNumber}`, W - M, 24, { align: 'right' });
+  pdf.text(`Date: ${fmtDate(receipt.date)}`, W - M, 32, { align: 'right' });
 
-  // ── Info box ──
+  // Practice address (small, bottom of header)
+  if (settings.address) {
+    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7);  tc(pdf, LGN);
+    pdf.text(settings.address, W - M, 40, { align: 'right' });
+  }
+
+  let y = HDR_H + 10;
+
+  // ── 2. Info box ─────────────────────────────────────────────────────────────
+  const BOX_H = 52;
   fc(pdf, S50);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.3);
-  pdf.roundedRect(M, y, CW, 56, 3, 3, 'FD');
+  pdf.roundedRect(M, y, CW, BOX_H, 3, 3, 'FD');
 
-  const col1X = M + 8;
-  const col2X = M + CW / 2 + 4;
+  const c1 = M + 8;
+  const c2 = M + CW / 2 + 4;
 
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, S300);
-  pdf.text('RECEIVED FROM', col1X, y + 8);
-  pdf.text('PAYMENT DATE',  col2X, y + 8);
+  // Row 1: Received From | Payment Date
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, S300);
+  pdf.text('RECEIVED FROM', c1, y + 9);
+  pdf.text('PAYMENT DATE', c2, y + 9);
 
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(15);  tc(pdf, S800);
-  pdf.text(receipt.clientName || '—', col1X, y + 17);
-  pdf.setFontSize(13);
-  pdf.text(fmtDate(receipt.date), col2X, y + 17);
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(13);  tc(pdf, S800);
+  const cName = (receipt.clientName || '—').slice(0, 28);
+  pdf.text(cName, c1, y + 18);
+  pdf.setFontSize(12);
+  pdf.text(fmtDate(receipt.date), c2, y + 18);
 
-  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.3);
+  // Horizontal divider
+  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.25);
   pdf.line(M + 5, y + 24, M + CW - 5, y + 24);
 
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, S300);
-  pdf.text('MODE OF PAYMENT',  col1X, y + 32);
-  pdf.text('TRANSACTION REF.', col2X, y + 32);
+  // Row 2: Mode of Payment | Transaction Ref
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, S300);
+  pdf.text('MODE OF PAYMENT', c1, y + 32);
+  pdf.text('TRANSACTION REF.', c2, y + 32);
 
-  // Payment mode badge
-  fc(pdf, WHT);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.3);
+  // Badge for payment mode
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);
   const modeText = receipt.paymentMethod || '—';
-  const modeW = pdf.getTextWidth(modeText) + 8;
-  pdf.roundedRect(col1X - 1, y + 35, modeW, 8, 2, 2, 'FD');
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);  tc(pdf, S800);
-  pdf.text(modeText, col1X + 3, y + 40.5);
+  const modeW = pdf.getTextWidth(modeText) + 10;
+  fc(pdf, WHT);  dc(pdf, [203, 213, 225]);  pdf.setLineWidth(0.4);
+  pdf.roundedRect(c1 - 1, y + 35, modeW, 8, 2, 2, 'FD');
+  tc(pdf, S800);  pdf.text(modeText, c1 + 4, y + 40.5);
 
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, S500);
-  pdf.text(receipt.reference || 'SYSTEM RECORD', col2X, y + 41);
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, S800);
+  pdf.text(receipt.reference || 'SYSTEM RECORD', c2, y + 41);
 
-  y += 64;
+  y += BOX_H + 10;
 
-  // ── Amount block ──
-  fc(pdf, GRN);  pdf.roundedRect(M, y, CW, 28, 3, 3, 'F');
-  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(9);  tc(pdf, [209, 250, 229]);
+  // ── 3. Amount block ─────────────────────────────────────────────────────────
+  const AMT_H = 30;
+  fc(pdf, GRN);  pdf.roundedRect(M, y, CW, AMT_H, 3, 3, 'F');
+
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, LGN);
   pdf.text('AMOUNT RECEIVED', M + 8, y + 9);
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(22);  tc(pdf, WHT);
-  pdf.text(inr(receipt.amount || 0), M + 8, y + 22);
 
-  y += 36;
+  // "Rs." label + number rendered separately to avoid symbol corruption
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);  tc(pdf, LGN);
+  pdf.text('Rs.', M + 8, y + 23);
+  const rsW = pdf.getTextWidth('Rs.');
+  pdf.setFontSize(20);  tc(pdf, WHT);
+  pdf.text((receipt.amount || 0).toLocaleString('en-IN'), M + 8 + rsW + 1, y + 23);
 
-  // ── Amount in words + signature ──
-  const wordCol = M;
-  const sigCol  = M + CW / 2 + 4;
+  y += AMT_H + 10;
 
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, S300);
-  pdf.text('AMOUNT IN WORDS', wordCol, y);
-  pdf.text('AUTHORIZED BY',   sigCol,  y);
+  // ── 4. Amount in words + Authorized Signatory (side-by-side, same baseline) ─
+  const halfW = CW / 2 - 4;
+  const sigColX = M + CW / 2 + 4;
 
+  // Section labels at same Y
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7);  tc(pdf, S300);
+  pdf.text('AMOUNT IN WORDS', M, y);
+  pdf.text('AUTHORIZED SIGNATORY', sigColX, y);
+
+  y += 6;
+
+  // Words text
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);  tc(pdf, S800);
-  const wordsLines = pdf.splitTextToSize(numberToWords(receipt.amount || 0), CW / 2 - 6);
-  wordsLines.forEach((l: string, i: number) => pdf.text(l, wordCol, y + 6 + i * 5));
+  const wordsLines = pdf.splitTextToSize(numberToWords(receipt.amount || 0), halfW);
+  wordsLines.forEach((l: string, i: number) => pdf.text(l, M, y + i * 5));
 
+  // Signature line + name (anchored at same y baseline as words block bottom)
+  const sigLineY = y + 22;
   dc(pdf, S300);  pdf.setLineWidth(0.4);
-  pdf.line(sigCol, y + 26, sigCol + 62, y + 26);
-  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);  tc(pdf, S800);
-  pdf.text(settings.practiceName, sigCol, y + 32);
+  pdf.line(sigColX, sigLineY, M + CW, sigLineY);
 
-  // ── Footer note ──
-  const noteY = 270;
-  dc(pdf, S100);  pdf.setLineWidth(0.3);  pdf.line(M, noteY, M + CW, noteY);
+  pdf.setFont('helvetica', 'bold');  pdf.setFontSize(9);  tc(pdf, S800);
+  pdf.text(settings.practiceName, sigColX, sigLineY + 5);
+
+  pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S500);
+  pdf.text('Tax Professional & Consultant', sigColX, sigLineY + 10);
+
+  y += 38;
+
+  // ── 5. Practice details bar ─────────────────────────────────────────────────
+  if (y + 18 < 260) {
+    fc(pdf, S50);  pdf.roundedRect(M, y, CW, 14, 2, 2, 'F');
+    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S500);
+    const detailParts: string[] = [settings.practiceName];
+    if (settings.gstin) detailParts.push(`GSTIN: ${settings.gstin}`);
+    if (settings.pan)   detailParts.push(`PAN: ${settings.pan}`);
+    pdf.text(detailParts.join('   |   '), W / 2, y + 6, { align: 'center' });
+    if (settings.address) {
+      pdf.text(settings.address, W / 2, y + 11, { align: 'center' });
+    }
+    y += 22;
+  }
+
+  // ── 6. Footer note ──────────────────────────────────────────────────────────
+  dc(pdf, S100);  pdf.setLineWidth(0.25);  pdf.line(M, y, M + CW, y);
+  y += 5;
   pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S500);
   pdf.text(
     'This is a computer-generated receipt and is valid without a physical signature.',
-    W / 2, noteY + 5, { align: 'center' }
+    W / 2, y, { align: 'center' }
   );
 
   addFooterWatermark(pdf);
