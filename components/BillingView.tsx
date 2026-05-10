@@ -113,6 +113,33 @@ const BillingView: React.FC<BillingViewProps> = ({
     }
   };
 
+  const handleDownloadClientLedgerPDF = (clientId: string) => {
+    const clientData = clients.find(c => c.id === clientId);
+    if (!clientData) return;
+    const clientInvoices = invoices.filter(i => i.clientId === clientId);
+    const clientReceipts = receipts.filter(r => r.clientId === clientId);
+    const entries = [
+      ...clientInvoices.map(inv => ({ type: 'invoice' as const, date: inv.date || '', amount: inv.total || 0, ref: inv.invoiceNumber, description: 'Invoice raised' })),
+      ...clientReceipts.map(rcp => ({ type: 'receipt' as const, date: rcp.date || '', amount: rcp.amount || 0, ref: rcp.receiptNumber, description: `Payment received (${rcp.paymentMethod})` })),
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let runningBalance = 0;
+    const ledgerWithBalance = entries.map(entry => {
+      if (entry.type === 'invoice') runningBalance += entry.amount;
+      else runningBalance -= entry.amount;
+      return { ...entry, balance: runningBalance };
+    });
+    const totalInvoiced = ledgerWithBalance.filter(e => e.type === 'invoice').reduce((s, e) => s + e.amount, 0);
+    const totalReceived = ledgerWithBalance.filter(e => e.type === 'receipt').reduce((s, e) => s + e.amount, 0);
+    setIsDownloading(true);
+    try {
+      generateClientLedgerPDF(clientData.name, clientData.pan, ledgerWithBalance, totalInvoiced, totalReceived, settings.practiceName);
+    } catch (err: any) {
+      alert(err.message || 'Error generating PDF');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // ============ SETTINGS SAVE ============
   const handleSaveSettings = () => {
     setSettings(localSettings);
@@ -914,11 +941,21 @@ const BillingView: React.FC<BillingViewProps> = ({
             onClick={() => {
               setIsDownloading(true);
               try {
+                const groupNames: string[] = selectedClients.map(c => c.group).filter(Boolean) as string[];
+                const uniqueGroups: string[] = Array.from(new Set(groupNames));
+                const groupTitle: string | undefined = uniqueGroups.length === 1 ? uniqueGroups[0] : undefined;
                 generateGroupLedgerPDF(
-                  clientSummaries.map(s => ({ clientName: s.client.name, totalInvoiced: s.totalInvoiced, totalReceived: s.totalReceived, outstanding: s.outstanding })),
+                  clientSummaries.map(s => ({
+                    clientName: s.client.name,
+                    groupName: s.client.group || '',
+                    totalInvoiced: s.totalInvoiced,
+                    totalReceived: s.totalReceived,
+                    outstanding: s.outstanding,
+                  })),
                   settings.practiceName,
                   ledgerDateFrom,
                   ledgerDateTo,
+                  groupTitle,
                 );
               } catch (err: any) {
                 alert(err.message || 'Error generating PDF');
@@ -1044,20 +1081,38 @@ const BillingView: React.FC<BillingViewProps> = ({
             <button onClick={() => setActiveTab('receipts')} className={`flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black transition-all ${activeTab === 'receipts' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'}`}>Receipts</button>
           </div>
           <div className="relative flex-1 w-full md:w-auto"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18}/><input placeholder="Search records..." className="clay-input pl-12 pr-4 py-3 w-full text-sm font-bold" /></div>
-          {/* Client Ledger Dropdown */}
-          <div className="relative">
-            <select
-              className="clay-input px-4 py-3 pr-10 font-bold text-sm appearance-none cursor-pointer"
-              value={selectedLedgerClient}
-              onChange={(e) => {
-                setSelectedLedgerClient(e.target.value);
-                if (e.target.value) setSubView('client-ledger');
-              }}
-            >
-              <option value="">Client Ledger...</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <FileText className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+          {/* Client Ledger: select + view/download actions */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <select
+                className="clay-input px-4 py-3 pr-10 font-bold text-sm appearance-none cursor-pointer"
+                value={selectedLedgerClient}
+                onChange={(e) => setSelectedLedgerClient(e.target.value)}
+              >
+                <option value="">Client Ledger...</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <FileText className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            </div>
+            {selectedLedgerClient && (
+              <>
+                <button
+                  title="View ledger"
+                  onClick={() => setSubView('client-ledger')}
+                  className="p-3 bg-white rounded-2xl text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 transition-all"
+                >
+                  <Eye size={18} />
+                </button>
+                <button
+                  title="Download ledger PDF"
+                  disabled={isDownloading}
+                  onClick={() => handleDownloadClientLedgerPDF(selectedLedgerClient)}
+                  className="p-3 bg-indigo-600 rounded-2xl text-white hover:bg-indigo-700 shadow-sm transition-all disabled:opacity-50"
+                >
+                  <FileDown size={18} />
+                </button>
+              </>
+            )}
           </div>
         </div>
 

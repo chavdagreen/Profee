@@ -739,10 +739,11 @@ export function generateClientLedgerPDF(
 // ─── GROUP LEDGER PDF ─────────────────────────────────────────────────────────
 
 export function generateGroupLedgerPDF(
-  summaries: { clientName: string; totalInvoiced: number; totalReceived: number; outstanding: number }[],
+  summaries: { clientName: string; groupName?: string; totalInvoiced: number; totalReceived: number; outstanding: number }[],
   practiceName: string,
   dateFrom?: string,
   dateTo?: string,
+  groupTitle?: string,
 ): void {
   const pdf  = new jsPDF('p', 'mm', 'a4');
   const W    = 210;
@@ -756,12 +757,14 @@ export function generateGroupLedgerPDF(
   // Thin accent bar at top
   fc(pdf, IDIG);  pdf.rect(0, 0, W, 2, 'F');
 
+  const multiGroup = !groupTitle && summaries.some(s => s.groupName);
+
   let y = 12;
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(22);  tc(pdf, S800);
-  pdf.text('GROUP LEDGER', M, y);
+  pdf.text(groupTitle ? groupTitle.toUpperCase() : 'GROUP LEDGER', M, y);
 
   pdf.setFont('helvetica', 'normal');  pdf.setFontSize(10);  tc(pdf, S500);
-  pdf.text('Summary', M, y + 7);
+  pdf.text(groupTitle ? 'Group Ledger Summary' : 'Summary', M, y + 7);
 
   // Right: practice + period
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(10);  tc(pdf, S800);
@@ -812,38 +815,53 @@ export function generateGroupLedgerPDF(
   y += CARD_H + 10;
 
   // ── 3. Table ─────────────────────────────────────────────────────────────────
-  // Column definitions (widths sum to CW = 182)
-  const colW  = [82, 32, 32, 36];   // Client | Invoiced | Received | Outstanding
-  const colX  = [M, M + colW[0], M + colW[0] + colW[1], M + colW[0] + colW[1] + colW[2]];
-  const RIGHT = M + CW;             // true right margin
+  // Column definitions — add Group column when clients span multiple groups
+  // multiGroup: Client(58) Group(26) Invoiced(30) Received(30) Outstanding(38) = 182
+  // singleGroup: Client(82) Invoiced(32) Received(32) Outstanding(36) = 182
+  const colW  = multiGroup ? [58, 26, 30, 30, 38] : [82, 32, 32, 36];
+  const colX: number[] = [M];
+  colW.slice(0, -1).forEach((w, i) => colX.push(colX[i] + w));
+  const RIGHT = M + CW;
 
-  // Draw table container (large rounded rect)
   const tableTopY = y;
-  const estRows   = summaries.length + 1; // +1 for grand total
+  const estRows   = summaries.length + 1;
   const ROW_H     = 10;
   const HDR_H     = 9;
-  const tableH    = HDR_H + estRows * ROW_H + 1;
+  const tableH    = HDR_H + 5 + estRows * ROW_H + 2;
 
   fc(pdf, WHT);  dc(pdf, [226, 232, 240]);  pdf.setLineWidth(0.4);
-  pdf.roundedRect(M, tableTopY, CW, Math.min(tableH, 240 - tableTopY), 3, 3, 'FD');
+  pdf.roundedRect(M, tableTopY, CW, Math.min(tableH, 245 - tableTopY), 3, 3, 'FD');
 
-  // Header row (slate-800 fill, rounded top via overlap)
+  // Header row
   fc(pdf, S800);  pdf.roundedRect(M, y, CW, HDR_H, 3, 3, 'F');
-  pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F'); // flush bottom half
+  pdf.rect(M, y + HDR_H / 2, CW, HDR_H / 2, 'F');
 
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(7.5);  tc(pdf, WHT);
-  pdf.text('Client Name',   colX[0] + 4,  y + 6);
-  pdf.text('Invoiced',      colX[1] + colW[1] - 3,  y + 6, { align: 'right' });
-  pdf.text('Received',      colX[2] + colW[2] - 3,  y + 6, { align: 'right' });
-  pdf.text('Outstanding',   RIGHT - 3,               y + 6, { align: 'right' });
+  if (multiGroup) {
+    pdf.text('Client Name', colX[0] + 4, y + 6);
+    pdf.text('Group',       colX[1] + 4, y + 6);
+    pdf.text('Invoiced',    colX[2] + colW[2] - 3, y + 6, { align: 'right' });
+    pdf.text('Received',    colX[3] + colW[3] - 3, y + 6, { align: 'right' });
+    pdf.text('Outstanding', RIGHT - 3,              y + 6, { align: 'right' });
+  } else {
+    pdf.text('Client Name', colX[0] + 4, y + 6);
+    pdf.text('Invoiced',    colX[1] + colW[1] - 3, y + 6, { align: 'right' });
+    pdf.text('Received',    colX[2] + colW[2] - 3, y + 6, { align: 'right' });
+    pdf.text('Outstanding', RIGHT - 3,              y + 6, { align: 'right' });
+  }
   y += HDR_H;
 
-  // Sub-label row (tiny Rs. unit labels)
+  // Sub-label row
   fc(pdf, [241, 245, 249]);  pdf.rect(M, y, CW, 5, 'F');
   pdf.setFont('helvetica', 'normal');  pdf.setFontSize(6);  tc(pdf, S500);
-  pdf.text('(Amount in Rs.)', colX[1] + colW[1] - 3, y + 3.5, { align: 'right' });
-  pdf.text('(Amount in Rs.)', colX[2] + colW[2] - 3, y + 3.5, { align: 'right' });
-  pdf.text('(Dr = Due)',       RIGHT - 3,              y + 3.5, { align: 'right' });
+  if (multiGroup) {
+    pdf.text('(Amount in Rs.)', colX[2] + colW[2] - 3, y + 3.5, { align: 'right' });
+    pdf.text('(Amount in Rs.)', colX[3] + colW[3] - 3, y + 3.5, { align: 'right' });
+  } else {
+    pdf.text('(Amount in Rs.)', colX[1] + colW[1] - 3, y + 3.5, { align: 'right' });
+    pdf.text('(Amount in Rs.)', colX[2] + colW[2] - 3, y + 3.5, { align: 'right' });
+  }
+  pdf.text('(Dr = Due)', RIGHT - 3, y + 3.5, { align: 'right' });
   y += 5;
 
   // Data rows
@@ -857,23 +875,38 @@ export function generateGroupLedgerPDF(
 
     const midY = y + ROW_H / 2 + 1.5;
 
-    // Client name
-    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, S800);
-    const nameStr = s.clientName.length > 36 ? s.clientName.slice(0, 34) + '…' : s.clientName;
-    pdf.text(nameStr, colX[0] + 4, midY);
+    if (multiGroup) {
+      // Client name
+      pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8);  tc(pdf, S800);
+      const nameStr = s.clientName.length > 20 ? s.clientName.slice(0, 18) + '…' : s.clientName;
+      pdf.text(nameStr, colX[0] + 4, midY);
+      // Group name (muted)
+      pdf.setFont('helvetica', 'normal');  pdf.setFontSize(7.5);  tc(pdf, S500);
+      const grpStr = (s.groupName || '—').length > 14 ? (s.groupName || '').slice(0, 12) + '…' : (s.groupName || '—');
+      pdf.text(grpStr, colX[1] + 4, midY);
+      // Invoiced
+      pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8);  tc(pdf, IDIG);
+      pdf.text(inr(s.totalInvoiced, 2), colX[2] + colW[2] - 3, midY, { align: 'right' });
+      // Received
+      tc(pdf, GREE);
+      pdf.text(inr(s.totalReceived, 2), colX[3] + colW[3] - 3, midY, { align: 'right' });
+    } else {
+      // Client name
+      pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, S800);
+      const nameStr = s.clientName.length > 36 ? s.clientName.slice(0, 34) + '…' : s.clientName;
+      pdf.text(nameStr, colX[0] + 4, midY);
+      // Invoiced
+      pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);  tc(pdf, IDIG);
+      pdf.text(inr(s.totalInvoiced, 2), colX[1] + colW[1] - 3, midY, { align: 'right' });
+      // Received
+      tc(pdf, GREE);
+      pdf.text(inr(s.totalReceived, 2), colX[2] + colW[2] - 3, midY, { align: 'right' });
+    }
 
-    // Invoiced (indigo)
-    pdf.setFont('helvetica', 'normal');  pdf.setFontSize(8.5);  tc(pdf, IDIG);
-    pdf.text(inr(s.totalInvoiced, 2), colX[1] + colW[1] - 3, midY, { align: 'right' });
-
-    // Received (green)
-    tc(pdf, GREE);
-    pdf.text(inr(s.totalReceived, 2), colX[2] + colW[2] - 3, midY, { align: 'right' });
-
-    // Outstanding (rose if Dr, green if Cr)
+    // Outstanding (shared for both layouts)
     const outColor: RGB = s.outstanding >= 0 ? ROSE : GREE;
     const outTxt = inr(Math.abs(s.outstanding), 2) + (s.outstanding > 0 ? '  Dr' : s.outstanding < 0 ? '  Cr' : '');
-    pdf.setFont('helvetica', 'bold');  tc(pdf, outColor);
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, outColor);
     pdf.text(outTxt, RIGHT - 3, midY, { align: 'right' });
 
     y += ROW_H;
@@ -894,8 +927,13 @@ export function generateGroupLedgerPDF(
   const gtY = y + (ROW_H + 2) / 2 + 2;
   pdf.setFont('helvetica', 'bold');  pdf.setFontSize(8.5);  tc(pdf, WHT);
   pdf.text('GRAND TOTAL', colX[0] + 4, gtY);
-  pdf.text(inr(grandInv, 2), colX[1] + colW[1] - 3, gtY, { align: 'right' });
-  pdf.text(inr(grandRec, 2), colX[2] + colW[2] - 3, gtY, { align: 'right' });
+  if (multiGroup) {
+    pdf.text(inr(grandInv, 2), colX[2] + colW[2] - 3, gtY, { align: 'right' });
+    pdf.text(inr(grandRec, 2), colX[3] + colW[3] - 3, gtY, { align: 'right' });
+  } else {
+    pdf.text(inr(grandInv, 2), colX[1] + colW[1] - 3, gtY, { align: 'right' });
+    pdf.text(inr(grandRec, 2), colX[2] + colW[2] - 3, gtY, { align: 'right' });
+  }
   const outTxt = inr(Math.abs(grandOut), 2) + (grandOut > 0 ? '  Dr' : grandOut < 0 ? '  Cr' : '');
   pdf.text(outTxt, RIGHT - 3, gtY, { align: 'right' });
 
