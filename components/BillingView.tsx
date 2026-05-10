@@ -944,7 +944,25 @@ const BillingView: React.FC<BillingViewProps> = ({
                 const groupNames: string[] = selectedClients.map(c => c.group).filter(Boolean) as string[];
                 const uniqueGroups: string[] = Array.from(new Set(groupNames));
                 const groupTitle: string | undefined = uniqueGroups.length === 1 ? uniqueGroups[0] : undefined;
+                // Build per-client running balances for detailed transaction rows
+                const balanceByClient: Record<string, number> = {};
+                const detailEntries = allEntries.map(entry => {
+                  if (!balanceByClient[entry.clientId]) balanceByClient[entry.clientId] = 0;
+                  if (entry.type === 'invoice') balanceByClient[entry.clientId] += entry.amount;
+                  else balanceByClient[entry.clientId] -= entry.amount;
+                  const client = selectedClients.find(c => c.id === entry.clientId);
+                  return {
+                    clientName: entry.clientName,
+                    groupName: client?.group || '',
+                    type: entry.type,
+                    date: entry.date,
+                    ref: entry.ref,
+                    amount: entry.amount,
+                    balance: balanceByClient[entry.clientId],
+                  };
+                });
                 generateGroupLedgerPDF(
+                  detailEntries,
                   clientSummaries.map(s => ({
                     clientName: s.client.name,
                     groupName: s.client.group || '',
