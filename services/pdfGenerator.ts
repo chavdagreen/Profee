@@ -889,8 +889,8 @@ export function generateGroupLedgerPDF(
   y += CARD_H + 8;
 
   // ── 3. Detailed transaction table ────────────────────────────────────────────
-  // Sr.#(8) Client(46) Date(22) Invoice#(24) Receipt#(24) Debit(22) Credit(22) Balance(14) = 182
-  const colW  = [8, 46, 22, 24, 24, 22, 22, 14];
+  // Sr.#(8) Client(46) Date(22) Invoice#(18) Receipt#(18) Debit(22) Credit(22) Balance(26) = 182
+  const colW  = [8, 46, 22, 18, 18, 22, 22, 26];
   const colX: number[] = [M];
   colW.slice(0, -1).forEach((w, i) => colX.push(colX[i] + w));
   const RIGHT = M + CW;
@@ -981,19 +981,11 @@ export function generateGroupLedgerPDF(
       pdf.text('—', colX[6] + colW[6] - 2, midY, { align: 'right' });
     }
 
-    // Balance
+    // Balance (single line — 26mm column fits "Rs.10,000.00 Dr")
     const balColor: RGB = entry.balance >= 0 ? ROSE : GREE;
-    const balTxt = inr(Math.abs(entry.balance), 2) + (entry.balance > 0 ? '\nDr' : entry.balance < 0 ? '\nCr' : '');
-    pdf.setFont('helvetica', 'bold');  tc(pdf, balColor);
-    // Balance on two lines if needed (amount on top, Dr/Cr tag below)
-    const balAmt = inr(Math.abs(entry.balance), 2);
-    const balTag = entry.balance > 0 ? 'Dr' : entry.balance < 0 ? 'Cr' : '';
-    pdf.setFontSize(6.5);
-    pdf.text(balAmt, RIGHT - 2, midY - 1, { align: 'right' });
-    if (balTag) {
-      pdf.setFontSize(5.5);  tc(pdf, balColor);
-      pdf.text(balTag, RIGHT - 2, midY + 3, { align: 'right' });
-    }
+    const balTag = entry.balance > 0 ? ' Dr' : entry.balance < 0 ? ' Cr' : '';
+    pdf.setFont('helvetica', 'bold');  pdf.setFontSize(6.5);  tc(pdf, balColor);
+    pdf.text(inr(Math.abs(entry.balance), 2) + balTag, RIGHT - 2, midY, { align: 'right' });
 
     y += ROW_H;
   });
@@ -1014,7 +1006,7 @@ export function generateGroupLedgerPDF(
   pdf.text('GRAND TOTAL', colX[1] + 2, gtY);
   pdf.text(inr(grandInv, 2), colX[5] + colW[5] - 2, gtY, { align: 'right' });
   pdf.text(inr(grandRec, 2), colX[6] + colW[6] - 2, gtY, { align: 'right' });
-  const outTxt = inr(Math.abs(grandOut), 2) + (grandOut > 0 ? '  Dr' : grandOut < 0 ? '  Cr' : '');
+  const outTxt = inr(Math.abs(grandOut), 2) + (grandOut > 0 ? ' Dr' : grandOut < 0 ? ' Cr' : '');
   pdf.text(outTxt, RIGHT - 2, gtY, { align: 'right' });
 
   y += ROW_H + 10;
