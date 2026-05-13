@@ -66,6 +66,7 @@ const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCalendarConnected, setIsCalendarConnected] = useState(() => db.hasCalendarToken());
   const [appLogo, setAppLogo] = useState<string | null>(null);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -190,6 +191,17 @@ const App: React.FC = () => {
     });
   };
 
+  const handleConnectGoogleCalendar = async (): Promise<boolean> => {
+    try {
+      const success = await db.connectGoogleCalendar();
+      setIsCalendarConnected(success);
+      return success;
+    } catch (err) {
+      console.error('Google Calendar connect error:', err);
+      return false;
+    }
+  };
+
   const handleSetHearings: React.Dispatch<React.SetStateAction<Hearing[]>> = (action) => {
     setHearings(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
@@ -198,6 +210,12 @@ const App: React.FC = () => {
       newHearings.forEach(h => {
         db.addHearing(h).then(saved => {
           setHearings(current => current.map(hh => hh.id === h.id ? saved : hh));
+          // Auto-sync new hearing to Google Calendar if connected
+          if (db.hasCalendarToken() && (saved.status === 'Upcoming' || saved.status === 'Adjourned')) {
+            db.syncHearingToGoogleCalendar(saved).then(result => {
+              if (result.authError) setIsCalendarConnected(false);
+            }).catch(console.error);
+          }
         }).catch(console.error);
       });
       return next;
@@ -537,9 +555,9 @@ const App: React.FC = () => {
           />
         ) : (
         <div key={activeView} className="animate-in fade-in slide-in-from-bottom-6 duration-500">
-          {activeView === 'dashboard' && <DashboardView clients={clients} hearings={hearings} invoices={invoices} onNavigate={setActiveView} onSelectClient={handleNavigateToClientProfile} isGoogleConnected={isGoogleConnected} />}
+          {activeView === 'dashboard' && <DashboardView clients={clients} hearings={hearings} invoices={invoices} onNavigate={setActiveView} onSelectClient={handleNavigateToClientProfile} isCalendarConnected={isCalendarConnected} onConnectCalendar={handleConnectGoogleCalendar} onCalendarDisconnected={() => setIsCalendarConnected(false)} />}
           {activeView === 'clients' && <ClientsView clients={clients} setClients={handleSetClients} hearings={hearings} setHearings={handleSetHearings} groups={groups} setGroups={handleSetGroups} setActiveView={setActiveView} invoices={invoices} receipts={receipts} onQuickBill={handleBillMatter} initialClientId={targetClientId} initialTab={targetProfileTab} clearNavigation={() => { setTargetClientId(null); setTargetProfileTab('details'); }} />}
-          {activeView === 'proceedings' && <ProceedingsView hearings={hearings} clients={clients} setHearings={handleSetHearings} onBillMatter={handleBillMatter} />}
+          {activeView === 'proceedings' && <ProceedingsView hearings={hearings} clients={clients} setHearings={handleSetHearings} onBillMatter={handleBillMatter} isCalendarConnected={isCalendarConnected} />}
           {activeView === 'billing' && <BillingView invoices={invoices} setInvoices={handleSetInvoices} clients={clients} receipts={receipts} setReceipts={handleSetReceipts} groups={groups} settings={billingSettings} setSettings={handleSetBillingSettings} prefill={pendingInvoiceFromMatter} onPrefillProcessed={() => setPendingInvoiceFromMatter(null)} />}
         </div>
         )}

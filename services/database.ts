@@ -179,13 +179,19 @@ export async function connectGoogleCalendar() {
   const result = await signInWithPopup(auth, provider);
   const credential = GoogleAuthProvider.credentialFromResult(result);
   if (credential?.accessToken) {
-    localStorage.setItem('google_access_token', credential.accessToken);
+    // Use a dedicated key so it's never overwritten by basic Google sign-in
+    localStorage.setItem('google_calendar_token', credential.accessToken);
+    return true;
   }
-  return !!credential?.accessToken;
+  return false;
 }
 
-export async function getGoogleAccessToken(): Promise<string | null> {
-  return localStorage.getItem('google_access_token');
+export function hasCalendarToken(): boolean {
+  return !!localStorage.getItem('google_calendar_token');
+}
+
+export function clearCalendarToken() {
+  localStorage.removeItem('google_calendar_token');
 }
 
 export async function signOut() {
@@ -205,18 +211,22 @@ export async function getSession() {
 // GOOGLE CALENDAR SYNC
 // ============================================================
 
-export async function syncHearingToGoogleCalendar(hearing: Hearing): Promise<boolean> {
-  const token = await getGoogleAccessToken();
-  if (!token) return false;
+export type SyncResult = { success: boolean; authError: boolean };
+export type BulkSyncResult = { synced: number; total: number; authError: boolean };
+
+export async function syncHearingToGoogleCalendar(hearing: Hearing): Promise<SyncResult> {
+  const token = localStorage.getItem('google_calendar_token');
+  if (!token) return { success: false, authError: true };
 
   const startDate = hearing.hearingDate;
-  const startTime = hearing.time || '10:00';
+  const startTime = (hearing.time && hearing.time.includes(':')) ? hearing.time : '10:00';
+  const [hh, mm] = startTime.split(':').map(Number);
+  const endHour = (hh + 1).toString().padStart(2, '0');
   const startDateTime = `${startDate}T${startTime}:00`;
-  const endHour = parseInt(startTime.split(':')[0]) + 1;
-  const endDateTime = `${startDate}T${endHour.toString().padStart(2, '0')}:${startTime.split(':')[1]}:00`;
+  const endDateTime = `${startDate}T${endHour}:${mm.toString().padStart(2, '0')}:00`;
 
   const event = {
-    summary: `${hearing.forum} Hearing - ${hearing.clientName}`,
+    summary: `${hearing.forum} Hearing — ${hearing.clientName}`,
     description: `Case: ${hearing.caseType}\nAY: ${hearing.assessmentYear}\nStatus: ${hearing.status}${hearing.description ? '\n\n' + hearing.description : ''}`,
     start: { dateTime: startDateTime, timeZone: 'Asia/Kolkata' },
     end: { dateTime: endDateTime, timeZone: 'Asia/Kolkata' },
@@ -233,26 +243,36 @@ export async function syncHearingToGoogleCalendar(hearing: Hearing): Promise<boo
     const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(event),
     });
-    return res.ok;
+
+    if (res.status === 401 || res.status === 403) {
+      // Token expired or missing calendar scope — clear it so UI updates
+      localStorage.removeItem('google_calendar_token');
+      return { success: false, authError: true };
+    }
+
+    return { success: res.ok, authError: false };
   } catch {
-    return false;
+    return { success: false, authError: false };
   }
 }
 
-export async function syncAllHearingsToGoogleCalendar(hearings: Hearing[]): Promise<number> {
+export async function syncAllHearingsToGoogleCalendar(hearings: Hearing[]): Promise<BulkSyncResult> {
+  const eligible = hearings.filter(h => h.status === 'Upcoming' || h.status === 'Adjourned');
   let synced = 0;
-  for (const h of hearings) {
-    if (h.status === 'Upcoming' || h.status === 'Adjourned') {
-      const ok = await syncHearingToGoogleCalendar(h);
-      if (ok) synced++;
-    }
+  let authError = false;
+
+  for (const h of eligible) {
+    const result = await syncHearingToGoogleCalendar(h);
+    if (result.authError) { authError = true; break; }
+    if (result.success) synced++;
   }
-  return synced;
+
+  return { synced, total: eligible.length, authError };
 }
 
 // ============================================================

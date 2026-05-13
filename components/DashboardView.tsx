@@ -15,7 +15,9 @@ interface DashboardViewProps {
   invoices: Invoice[];
   onNavigate: (view: View) => void;
   onSelectClient: (clientId: string, tab: 'details' | 'financials' | 'proceedings') => void;
-  isGoogleConnected?: boolean;
+  isCalendarConnected?: boolean;
+  onConnectCalendar?: () => Promise<boolean>;
+  onCalendarDisconnected?: () => void;
 }
 
 interface PulseCardProps {
@@ -28,8 +30,9 @@ interface PulseCardProps {
   label?: string;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoices, onNavigate, onSelectClient, isGoogleConnected }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoices, onNavigate, onSelectClient, isCalendarConnected, onConnectCalendar, onCalendarDisconnected }) => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [drillDown, setDrillDown] = useState<{ type: 'notices' | 'hearings' | 'daily_notices' | 'daily_hearings'; data: Hearing[] } | null>(null);
   const [dayEvents, setDayEvents] = useState<{ day: number; events: Hearing[] } | null>(null);
 
@@ -122,23 +125,49 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
     return hearings.filter(h => h.hearingDate === todayStr);
   }, [hearings, todayStr]);
 
-  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const handleSync = async () => {
+    if (!isCalendarConnected) return;
     setIsSyncing(true);
     setSyncResult(null);
     try {
-      const count = await syncAllHearingsToGoogleCalendar(hearings);
-      if (count > 0) {
-        setSyncResult(`${count} hearing(s) synced to Google Calendar`);
+      const result = await syncAllHearingsToGoogleCalendar(hearings);
+      if (result.authError) {
+        onCalendarDisconnected?.();
+        setSyncResult({ msg: 'Google Calendar session expired — please reconnect.', ok: false });
+      } else if (result.synced > 0) {
+        setSyncResult({ msg: `✓ ${result.synced} of ${result.total} hearing(s) synced to Google Calendar`, ok: true });
+      } else if (result.total === 0) {
+        setSyncResult({ msg: 'No upcoming or adjourned hearings to sync.', ok: false });
       } else {
-        setSyncResult('No upcoming hearings to sync, or Google Calendar not connected');
+        setSyncResult({ msg: `Sync completed — ${result.synced} of ${result.total} succeeded.`, ok: result.synced > 0 });
       }
     } catch {
-      setSyncResult('Sync failed. Please sign in with Google first.');
+      setSyncResult({ msg: 'Sync failed. Please try again.', ok: false });
     }
     setIsSyncing(false);
-    setTimeout(() => setSyncResult(null), 4000);
+    setTimeout(() => setSyncResult(null), 5000);
+  };
+
+  const handleConnectCalendar = async () => {
+    if (!onConnectCalendar) return;
+    setIsConnecting(true);
+    setSyncResult(null);
+    try {
+      const success = await onConnectCalendar();
+      if (success) {
+        setSyncResult({ msg: '✓ Google Calendar connected! Syncing hearings now...', ok: true });
+        // Auto-run sync immediately after connecting
+        setTimeout(handleSync, 500);
+      } else {
+        setSyncResult({ msg: 'Connection cancelled or failed. Please try again.', ok: false });
+      }
+    } catch {
+      setSyncResult({ msg: 'Could not connect to Google. Check pop-up blocker settings.', ok: false });
+    }
+    setIsConnecting(false);
+    setTimeout(() => setSyncResult(null), 5000);
   };
 
   const getForumColor = (forum: string) => {
@@ -323,24 +352,37 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
         {/* Litigation Calendar */}
         <div className="xl:col-span-2 clay-card p-10 border-none bg-white dark:bg-slate-800 shadow-2xl animate-in slide-in-from-left-8 duration-700 relative">
           <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 flex-wrap">
               <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Litigation Calendar</h3>
-              <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600">
-                 <div className={`flex items-center gap-2 ${isSyncing ? 'text-indigo-600' : isGoogleConnected ? 'text-emerald-500' : 'text-slate-400'}`}>
-                    <Smartphone size={14} />
-                    <span className="text-[10px] font-bold">
-                      {isSyncing ? 'Syncing Google...' : isGoogleConnected ? 'G-Sync Active' : 'Connect Google'}
-                    </span>
-                 </div>
-                 <button
-                   onClick={handleSync}
-                   disabled={!isGoogleConnected}
-                   title={isGoogleConnected ? 'Sync to Google Calendar' : 'Sign in with Google to enable sync'}
-                   className={`transition-all ${isSyncing ? 'animate-spin text-indigo-600' : isGoogleConnected ? 'text-slate-300 hover:text-indigo-600' : 'text-slate-200 cursor-not-allowed'}`}
-                 >
-                    <RefreshCw size={14} />
-                 </button>
-              </div>
+
+              {isCalendarConnected ? (
+                /* Connected — show status + manual sync button */
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-2xl">
+                  <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                    {isSyncing ? 'Syncing…' : 'G-Sync Active'}
+                  </span>
+                  <button
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                    title="Sync all upcoming hearings to Google Calendar"
+                    className={`ml-1 transition-all ${isSyncing ? 'animate-spin text-indigo-500' : 'text-emerald-400 hover:text-emerald-700'}`}
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                </div>
+              ) : (
+                /* Not connected — show connect button */
+                <button
+                  onClick={handleConnectCalendar}
+                  disabled={isConnecting}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-2xl transition-all shadow-md shadow-indigo-200/50 disabled:opacity-60"
+                  title="Grant calendar.events permission to enable auto-sync"
+                >
+                  <Smartphone size={13} />
+                  {isConnecting ? 'Connecting…' : 'Connect Google Calendar'}
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
                <button onClick={goToToday} className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mr-2 hover:underline">Today</button>
@@ -352,8 +394,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ clients, hearings, invoic
 
           {/* Sync Result Toast */}
           {syncResult && (
-            <div className="mb-4 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-2xl text-xs font-bold text-indigo-600 dark:text-indigo-300 animate-in fade-in duration-300">
-              {syncResult}
+            <div className={`mb-4 px-4 py-2.5 rounded-2xl text-xs font-bold animate-in fade-in duration-300 flex items-center gap-2 ${
+              syncResult.ok
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                : 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-600 dark:text-rose-300'
+            }`}>
+              {syncResult.msg}
             </div>
           )}
 
