@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -110,8 +110,12 @@ const App: React.FC = () => {
   }, []);
 
   // ======= LOAD DATA FROM SUPABASE =======
+  // Track which UID we last loaded for — prevents spurious reloads when
+  // connectGoogleCalendar() re-fires onAuthStateChanged for the same user.
+  const loadedUidRef = useRef<string | null>(null);
+
   const loadAllData = useCallback(async () => {
-    if (!user) return;
+    if (!auth.currentUser) return;
     setDataLoading(true);
     try {
       const [clientsData, hearingsData, invoicesData, receiptsData, groupsData, settingsData] = await Promise.all([
@@ -133,10 +137,13 @@ const App: React.FC = () => {
     } finally {
       setDataLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (user) loadAllData();
+    const uid = user?.uid ?? null;
+    if (uid === loadedUidRef.current) return; // same user — skip reload
+    loadedUidRef.current = uid;
+    if (uid) loadAllData();
   }, [user, loadAllData]);
 
   // ======= THEME =======
@@ -206,17 +213,26 @@ const App: React.FC = () => {
     setHearings(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       const prevIds = new Set(prev.map(h => h.id));
+      // Persist new hearings
       const newHearings = next.filter(h => !prevIds.has(h.id));
       newHearings.forEach(h => {
         db.addHearing(h).then(saved => {
           setHearings(current => current.map(hh => hh.id === h.id ? saved : hh));
-          // Auto-sync new hearing to Google Calendar if connected
+          // Auto-sync new hearing to Google Calendar if connected (best-effort, non-blocking)
           if (db.hasCalendarToken() && (saved.status === 'Upcoming' || saved.status === 'Adjourned')) {
             db.syncHearingToGoogleCalendar(saved).then(result => {
               if (result.authError) setIsCalendarConnected(false);
             }).catch(console.error);
           }
         }).catch(console.error);
+      });
+      // Persist updated hearings
+      const updatedHearings = next.filter(h =>
+        prevIds.has(h.id) &&
+        JSON.stringify(h) !== JSON.stringify(prev.find(p => p.id === h.id))
+      );
+      updatedHearings.forEach(h => {
+        db.updateHearing(h).catch(console.error);
       });
       return next;
     });
