@@ -116,26 +116,27 @@ const ClientsView: React.FC<ClientsViewProps> = ({
   };
 
   return (
-    <div className="flex h-[calc(100vh-140px)] gap-6 animate-in fade-in duration-500 overflow-hidden">
-      {/* LEFT: MASTER LIST SIDEBAR */}
-      <div className="w-80 flex flex-col clay-card bg-white dark:bg-slate-800 border-none shadow-xl overflow-hidden">
-        <div className="p-4 border-b border-slate-50 dark:border-slate-700 space-y-3 bg-slate-50/50">
-          <div className="flex items-center justify-between">
-            <h3 className="font-black text-slate-800 dark:text-white tracking-tight text-sm">Client Directory</h3>
-            <span className="text-[10px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">{filteredClients.length}</span>
+    <div className="flex h-[calc(100vh-112px)] gap-5 animate-in fade-in duration-500 overflow-hidden">
+      {/* LEFT: CLIENT DIRECTORY */}
+      <div className="w-72 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shrink-0">
+        {/* Header */}
+        <div className="px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Client Directory</h3>
+            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full tabular-nums">{filteredClients.length}</span>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-            <input 
-              type="text" 
-              placeholder="Name or PAN..." 
-              className="clay-input w-full pl-9 pr-3 py-2 text-xs font-bold"
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={13} />
+            <input
+              type="text"
+              placeholder="Name or PAN..."
+              className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/40 transition font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <select 
-            className="clay-input w-full p-2 text-[10px] font-black tracking-wide text-slate-500"
+          <select
+            className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/40 transition text-slate-500 dark:text-slate-400 font-medium"
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
           >
@@ -144,203 +145,233 @@ const ClientsView: React.FC<ClientsViewProps> = ({
           </select>
         </div>
 
+        {/* Client List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {filteredClients.map(client => (
             <button
               key={client.id}
               onClick={() => { setSelectedClientId(client.id); setProfileTab('details'); }}
-              className={`w-full p-4 text-left transition-all border-b border-slate-50 dark:border-slate-700/50 flex items-center gap-3 group ${selectedClientId === client.id ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+              className={`w-full px-4 py-3 text-left transition-all flex items-center gap-3 group border-b border-slate-50 dark:border-slate-700/40 ${
+                selectedClientId === client.id
+                  ? 'bg-indigo-600 border-b-indigo-600'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'
+              }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${selectedClientId === client.id ? 'bg-white/20' : 'bg-indigo-50 text-indigo-600'}`}>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                selectedClientId === client.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
+              }`}>
                 {client.name.charAt(0)}
               </div>
-              <div className="truncate flex-1">
-                <p className={`font-bold text-xs truncate ${selectedClientId === client.id ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{client.name}</p>
-                <p className={`text-[9px] font-bold truncate opacity-60 tracking-wide ${selectedClientId === client.id ? 'text-indigo-100' : 'text-slate-400'}`}>{client.pan}</p>
+              <div className="truncate flex-1 min-w-0">
+                <p className={`font-semibold text-xs truncate ${selectedClientId === client.id ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}>{client.name}</p>
+                <p className={`text-[10px] truncate font-medium ${selectedClientId === client.id ? 'text-indigo-200' : 'text-slate-400'}`}>{client.pan}</p>
               </div>
-              <ChevronRight size={14} className={`shrink-0 transition-transform ${selectedClientId === client.id ? 'translate-x-1' : 'opacity-0 group-hover:opacity-100'}`} />
+              <ChevronRight size={12} className={`shrink-0 transition-all ${selectedClientId === client.id ? 'text-white/60 translate-x-0.5' : 'text-slate-300 opacity-0 group-hover:opacity-100'}`} />
             </button>
           ))}
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="w-full p-4 text-center text-indigo-600 font-black text-[10px] tracking-wide bg-indigo-50/50 hover:bg-indigo-100 transition-colors sticky bottom-0 border-t"
-          >
-            + New Client
-          </button>
         </div>
+
+        {/* Add Client Button */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center justify-center gap-2 px-4 py-3 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border-t border-slate-100 dark:border-slate-700 shrink-0"
+        >
+          <Plus size={13} /> New Client
+        </button>
       </div>
 
-      {/* RIGHT: DETAIL VIEW AREA */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+      {/* RIGHT: PROFILE DETAIL */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-w-0">
         {selectedClient ? (
-          <div className="space-y-6">
-            <div className="clay-card p-8 border-none bg-white dark:bg-slate-800 shadow-xl flex items-center gap-8 sticky top-0 z-10">
-               <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-black shadow-lg shadow-indigo-200">{selectedClient.name.charAt(0)}</div>
-               <div className="flex-1">
-                  <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight leading-none">{selectedClient.name}</h2>
-                  <div className="flex items-center gap-4 mt-2">
-                    <span className="text-[10px] font-black tracking-wide text-slate-400 flex items-center gap-1"><Building size={12}/> {selectedClient.group}</span>
-                    <span className="text-[10px] font-black tracking-wide text-slate-400 flex items-center gap-1"><Tag size={12}/> {selectedClient.pan}</span>
-                    <span className="text-[10px] font-black tracking-wide bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg">{selectedClient.entityType}</span>
-                  </div>
-               </div>
-               <div className="flex bg-slate-100 dark:bg-slate-700 p-1.5 rounded-2xl">
-                  {['details', 'financials', 'proceedings'].map(tab => (
-                    <button 
-                      key={tab} 
-                      onClick={() => setProfileTab(tab as any)} 
-                      className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-wide transition-all ${profileTab === tab ? 'bg-white dark:bg-slate-600 text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-               </div>
+          <div className="space-y-5">
+            {/* Profile Header Card */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 flex items-center gap-6 sticky top-0 z-10">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-indigo-200/50 shrink-0">{selectedClient.name.charAt(0)}</div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight leading-tight">{selectedClient.name}</h2>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1"><Building size={10}/> {selectedClient.group}</span>
+                  <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1"><Tag size={10}/> {selectedClient.pan}</span>
+                  <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg border border-indigo-100">{selectedClient.entityType}</span>
+                </div>
+              </div>
+              <div className="flex bg-slate-100 dark:bg-slate-700/70 p-1 rounded-xl gap-0.5 shrink-0">
+                {(['details', 'financials', 'proceedings'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setProfileTab(tab)}
+                    className={`px-4 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all ${
+                      profileTab === tab
+                        ? 'bg-white dark:bg-slate-600 text-indigo-600 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* DETAILS TAB */}
             {profileTab === 'details' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-2">
-                <div className="clay-card p-8 bg-white dark:bg-slate-800 border-none space-y-6">
-                  <h4 className="text-[10px] font-black text-indigo-500 tracking-wide border-b pb-2">Identification & Portal</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl group">
-                       <ShieldCheck className="text-emerald-500" size={20} />
-                       <div className="flex-1">
-                          <p className="text-[9px] font-bold text-slate-400">IT Portal Password (Encrypted)</p>
-                          <p className="font-bold font-mono tracking-tighter text-slate-800 dark:text-slate-200">
-                            {isPasswordVisible ? (selectedClient.portalPassword || 'N/A') : '••••••••••••'}
-                          </p>
-                       </div>
-                       <button onClick={() => setIsPasswordVisible(!isPasswordVisible)} className="text-slate-300 hover:text-indigo-600"><Eye size={18}/></button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 space-y-4">
+                  <p className="text-[10px] font-bold text-indigo-500 tracking-widest uppercase">Identification & Portal</p>
+                  <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
+                    <ShieldCheck className="text-emerald-500 shrink-0" size={18} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-medium text-slate-400 mb-0.5">IT Portal Password (Encrypted)</p>
+                      <p className="font-semibold font-mono text-sm tracking-widest text-slate-700 dark:text-slate-200">
+                        {isPasswordVisible ? (selectedClient.portalPassword || 'N/A') : '••••••••••••'}
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                          <p className="text-[9px] font-bold text-slate-400">GSTIN</p>
-                          <p className="font-bold text-xs">{selectedClient.gstin || 'Unregistered'}</p>
-                       </div>
-                       <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                          <p className="text-[9px] font-bold text-slate-400">Email ID</p>
-                          <p className="font-bold text-xs truncate">{selectedClient.email || 'None'}</p>
-                       </div>
+                    <button onClick={() => setIsPasswordVisible(!isPasswordVisible)} className="text-slate-300 hover:text-indigo-500 transition-colors shrink-0"><Eye size={16}/></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
+                      <p className="text-[10px] font-medium text-slate-400 mb-1">GSTIN</p>
+                      <p className="font-semibold text-xs text-slate-700 dark:text-slate-200">{selectedClient.gstin || 'Unregistered'}</p>
+                    </div>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
+                      <p className="text-[10px] font-medium text-slate-400 mb-1">Email ID</p>
+                      <p className="font-semibold text-xs truncate text-slate-700 dark:text-slate-200">{selectedClient.email || 'None'}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="clay-card p-8 bg-white dark:bg-slate-800 border-none space-y-6">
-                  <h4 className="text-[10px] font-black text-indigo-500 tracking-wide border-b pb-2">Communication</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                       <Phone className="text-slate-300" size={18} />
-                       <div><p className="text-[10px] font-bold text-slate-400">Mobile</p><p className="font-bold">{selectedClient.contact}</p></div>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 space-y-4">
+                  <p className="text-[10px] font-bold text-indigo-500 tracking-widest uppercase">Communication</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
+                      <Phone className="text-slate-300 shrink-0" size={16} />
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 mb-0.5">Mobile</p>
+                        <p className="font-semibold text-sm text-slate-700 dark:text-slate-200">{selectedClient.contact || '—'}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                       <MapPin className="text-slate-300" size={18} />
-                       <div><p className="text-[10px] font-bold text-slate-400">Address</p><p className="font-bold text-sm leading-tight text-slate-600">{selectedClient.address || 'Not Provided'}</p></div>
+                    <div className="flex items-start gap-3 p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
+                      <MapPin className="text-slate-300 shrink-0 mt-0.5" size={16} />
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 mb-0.5">Address</p>
+                        <p className="font-semibold text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{selectedClient.address || 'Not Provided'}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* FINANCIALS TAB */}
             {profileTab === 'financials' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom-2">
-                 <div className="grid grid-cols-3 gap-6">
-                    <div className="clay-card p-6 bg-emerald-500 text-white border-none flex items-center justify-between">
-                       <div><p className="text-[9px] font-black tracking-wide opacity-80">Paid Amount</p><h3 className="text-3xl font-black">₹{clientReceipts.reduce((s, r) => s + r.amount, 0).toLocaleString()}</h3></div>
-                       <TrendingUp size={32} className="opacity-30" />
+              <div className="space-y-5 animate-in slide-in-from-bottom-2 duration-300">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-emerald-500 rounded-2xl p-5 text-white flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-medium opacity-75 mb-1">Paid Amount</p>
+                      <h3 className="text-2xl font-bold">₹{clientReceipts.reduce((s, r) => s + r.amount, 0).toLocaleString()}</h3>
                     </div>
-                    <div className="clay-card p-6 bg-amber-500 text-white border-none flex items-center justify-between">
-                       <div><p className="text-[9px] font-black tracking-wide opacity-80">Receivable</p><h3 className="text-3xl font-black">₹{ledgerData.length > 0 ? ledgerData[ledgerData.length-1].balance.toLocaleString() : 0}</h3></div>
-                       <AlertCircle size={32} className="opacity-30" />
+                    <TrendingUp size={28} className="opacity-25" />
+                  </div>
+                  <div className="bg-amber-500 rounded-2xl p-5 text-white flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-medium opacity-75 mb-1">Receivable</p>
+                      <h3 className="text-2xl font-bold">₹{ledgerData.length > 0 ? ledgerData[ledgerData.length-1].balance.toLocaleString() : 0}</h3>
                     </div>
-                    <div className="clay-card p-4 bg-white dark:bg-slate-800 border-none flex flex-col gap-2">
-                       <button 
-                        onClick={() => onQuickBill({ clientId: selectedClient.id, clientName: selectedClient.name })}
-                        className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] tracking-wide hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                       >
-                         <ReceiptIndianRupee size={16}/> Create Invoice
-                       </button>
-                       <button 
-                        onClick={() => setActiveView('billing')}
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[10px] tracking-wide hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                       >
-                         <Wallet size={16}/> Record Receipt
-                       </button>
-                    </div>
-                 </div>
+                    <AlertCircle size={28} className="opacity-25" />
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 flex flex-col gap-2">
+                    <button
+                      onClick={() => onQuickBill({ clientId: selectedClient.id, clientName: selectedClient.name })}
+                      className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 rounded-xl font-semibold text-xs hover:bg-indigo-600 hover:text-white transition-all"
+                    >
+                      <ReceiptIndianRupee size={14}/> Create Invoice
+                    </button>
+                    <button
+                      onClick={() => setActiveView('billing')}
+                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 rounded-xl font-semibold text-xs hover:bg-emerald-600 hover:text-white transition-all"
+                    >
+                      <Wallet size={14}/> Record Receipt
+                    </button>
+                  </div>
+                </div>
 
-                 <div className="clay-card p-8 border-none bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
-                    <div className="flex justify-between items-center mb-6">
-                       <h4 className="font-black text-slate-800 dark:text-white tracking-wide">Ledger Statement</h4>
-                       <div className="flex gap-2">
-                         <button className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-indigo-600"><Printer size={16}/></button>
-                         <button className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-indigo-600"><FileDown size={16}/></button>
-                       </div>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+                  <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+                    <h4 className="font-semibold text-slate-700 dark:text-white text-sm">Ledger Statement</h4>
+                    <div className="flex gap-2">
+                      <button className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Printer size={15}/></button>
+                      <button className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><FileDown size={15}/></button>
                     </div>
-                    <div className="overflow-x-auto">
-                       <table className="w-full text-left text-sm font-bold">
-                          <thead className="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-bold uppercase text-slate-400 tracking-wide border-b">
-                             <tr>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Particulars</th>
-                                <th className="px-6 py-4 text-right">Debit</th>
-                                <th className="px-6 py-4 text-right">Credit</th>
-                                <th className="px-6 py-4 text-right">Balance</th>
-                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                             {ledgerData.map(e => (
-                               <tr key={e.id} className="hover:bg-slate-50/50">
-                                  <td className="px-6 py-4 text-slate-400 text-xs">{e.date}</td>
-                                  <td className="px-6 py-4 text-slate-800 dark:text-slate-200">{e.particulars}</td>
-                                  <td className="px-6 py-4 text-right text-rose-500">{e.debit > 0 ? e.debit.toLocaleString() : '-'}</td>
-                                  <td className="px-6 py-4 text-right text-emerald-600">{e.credit > 0 ? e.credit.toLocaleString() : '-'}</td>
-                                  <td className="px-6 py-4 text-right font-black">₹{e.balance.toLocaleString()}</td>
-                               </tr>
-                             ))}
-                          </tbody>
-                       </table>
-                    </div>
-                 </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 dark:bg-slate-900/40 text-[10px] font-semibold uppercase text-slate-400 tracking-wide">
+                        <tr>
+                          <th className="px-6 py-3">Date</th>
+                          <th className="px-6 py-3">Particulars</th>
+                          <th className="px-6 py-3 text-right">Debit</th>
+                          <th className="px-6 py-3 text-right">Credit</th>
+                          <th className="px-6 py-3 text-right">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                        {ledgerData.map(e => (
+                          <tr key={e.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/20 transition-colors">
+                            <td className="px-6 py-3.5 text-slate-400 text-xs font-medium">{e.date}</td>
+                            <td className="px-6 py-3.5 text-slate-700 dark:text-slate-200 font-medium text-xs">{e.particulars}</td>
+                            <td className="px-6 py-3.5 text-right text-rose-500 font-semibold text-xs">{e.debit > 0 ? `₹${e.debit.toLocaleString()}` : '—'}</td>
+                            <td className="px-6 py-3.5 text-right text-emerald-600 font-semibold text-xs">{e.credit > 0 ? `₹${e.credit.toLocaleString()}` : '—'}</td>
+                            <td className="px-6 py-3.5 text-right font-bold text-slate-700 dark:text-white text-xs">₹{e.balance.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                        {ledgerData.length === 0 && (
+                          <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-300 text-xs font-medium">No transactions yet</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
+            {/* PROCEEDINGS TAB */}
             {profileTab === 'proceedings' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom-2">
-                 <div className="flex justify-between items-center">
-                    <h4 className="font-black text-slate-800 dark:text-white tracking-wide">Case Directory</h4>
-                    <button onClick={() => setShowAddHearingModal(true)} className="clay-button px-6 py-2 flex items-center gap-2 font-black text-[10px]">
-                      <Plus size={14}/> Register New Matter
-                    </button>
-                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {clientHearings.map(h => (
-                      <div key={h.id} className="clay-card p-6 border-none bg-white dark:bg-slate-800 hover:scale-[1.02] transition-all group">
-                         <div className="flex justify-between items-start mb-4">
-                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase">{h.forum}</span>
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${h.status === 'Upcoming' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>{h.status}</span>
-                         </div>
-                         <h5 className="font-black text-lg text-slate-800 dark:text-white tracking-tight leading-tight">{h.caseType}</h5>
-                         <p className="text-[10px] font-bold text-slate-400 tracking-wide mt-1 mb-4">AY {h.assessmentYear}</p>
-                         <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                            <div className="flex items-center gap-2 text-slate-500"><Calendar size={14}/><span className="text-[10px] font-black">{h.hearingDate}</span></div>
-                            <button className="text-indigo-600 font-bold text-[10px] flex items-center gap-1 group-hover:translate-x-1 transition-transform">View Details <ChevronRight size={12}/></button>
-                         </div>
+              <div className="space-y-5 animate-in slide-in-from-bottom-2 duration-300">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold text-slate-700 dark:text-white text-sm">Case Directory</h4>
+                  <button onClick={() => setShowAddHearingModal(true)} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200/50">
+                    <Plus size={13}/> Register Matter
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {clientHearings.map(h => (
+                    <div key={h.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 hover:border-indigo-200 dark:hover:border-indigo-700 transition-all group">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-semibold">{h.forum}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${h.status === 'Upcoming' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>{h.status}</span>
                       </div>
-                    ))}
-                    {clientHearings.length === 0 && (
-                      <div className="col-span-full p-20 flex flex-col items-center justify-center opacity-20">
-                         <Gavel size={64} className="mb-4" />
-                         <p className="font-black tracking-wide text-sm">No Active Proceedings</p>
+                      <h5 className="font-bold text-slate-800 dark:text-white text-sm leading-snug mb-1">{h.caseType}</h5>
+                      <p className="text-[10px] font-medium text-slate-400 mb-4">AY {h.assessmentYear}</p>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-50 dark:border-slate-700">
+                        <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-medium"><Calendar size={12}/>{h.hearingDate}</div>
+                        <button className="text-indigo-600 text-[10px] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">Details <ChevronRight size={11}/></button>
                       </div>
-                    )}
-                 </div>
+                    </div>
+                  ))}
+                  {clientHearings.length === 0 && (
+                    <div className="col-span-full py-16 flex flex-col items-center justify-center opacity-20">
+                      <Gavel size={48} className="mb-3" />
+                      <p className="font-semibold text-sm">No Active Proceedings</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-300">
-             <Users size={64} className="mb-4 opacity-10" />
-             <p className="font-black tracking-wide">Select a client to view profile</p>
+            <Users size={48} className="mb-3 opacity-20" />
+            <p className="font-medium text-sm text-slate-400">Select a client to view profile</p>
           </div>
         )}
       </div>

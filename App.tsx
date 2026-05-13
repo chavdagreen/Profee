@@ -11,6 +11,11 @@ import {
   RefreshCw,
   LogOut,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sun,
+  Moon,
+  UserCircle,
 } from 'lucide-react';
 import { View, Client, Hearing, Invoice, Receipt, BillingSettings } from './types';
 import DashboardView from './components/DashboardView';
@@ -60,6 +65,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [appLogo, setAppLogo] = useState<string | null>(null);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -365,105 +371,162 @@ const App: React.FC = () => {
     );
   }
 
-  // ======= NAV ITEM =======
-  const NavItem: React.FC<{ view: View; icon: React.ReactNode; label: string }> = ({ view, icon, label }) => (
-    <button
-      onClick={() => {
-        setActiveView(view);
-        setIsMobileMenuOpen(false);
-      }}
-      className={`group flex items-center justify-between px-6 py-4 rounded-[1.5rem] transition-all w-full relative overflow-hidden ${
-        activeView === view
-          ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-none scale-105'
-          : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg'
-      }`}
-    >
-      <div className="flex items-center gap-4 z-10">
-        <div className={`transition-transform group-hover:scale-110 ${activeView === view ? 'text-white' : 'text-indigo-400'}`}>
+  // ======= NAV ITEM (supports collapsed mode) =======
+  const NavItem: React.FC<{ view: View; icon: React.ReactNode; label: string; collapsed?: boolean }> = ({ view, icon, label, collapsed }) => (
+    <div className="relative group/nav">
+      <button
+        onClick={() => {
+          setActiveView(view);
+          setIsMobileMenuOpen(false);
+        }}
+        title={collapsed ? label : undefined}
+        className={`flex items-center transition-all duration-200 w-full ${
+          collapsed
+            ? 'justify-center p-3 rounded-2xl'
+            : 'gap-3 px-4 py-3 rounded-2xl'
+        } ${
+          activeView === view
+            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200/60 dark:shadow-indigo-900/40'
+            : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60'
+        }`}
+      >
+        <span className={`shrink-0 transition-transform duration-200 group-hover/nav:scale-110 ${activeView === view ? 'text-white' : 'text-indigo-400'}`}>
           {icon}
+        </span>
+        {!collapsed && <span className="font-semibold text-sm tracking-tight truncate">{label}</span>}
+      </button>
+      {/* Tooltip for collapsed mode */}
+      {collapsed && (
+        <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-slate-800 dark:bg-slate-700 text-white text-xs font-semibold rounded-xl whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150 z-50 shadow-xl">
+          {label}
         </div>
-        <span className="font-bold text-sm tracking-tight">{label}</span>
-      </div>
-      {activeView === view && (
-        <ChevronRight size={16} className="text-white/50" />
       )}
-    </button>
+    </div>
   );
 
   // ======= MAIN APP =======
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#F0F4F8] dark:bg-[#0f172a] transition-all duration-500 overflow-hidden">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-80 bg-[#f8fafc] dark:bg-[#1e293b] p-8 shadow-2xl z-20 border-r border-white dark:border-slate-800 transition-colors">
-        <div className="flex items-center gap-4 mb-12 px-2 group">
-          <div className="relative cursor-pointer transition-all duration-500 hover:rotate-12" onClick={handleGenerateLogo}>
-            {appLogo ? <img src={appLogo} alt="Profee.in" className="w-12 h-12 rounded-2xl object-cover shadow-lg" /> :
-              <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-xl">
-                {isGeneratingLogo ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Gavel className="w-6 h-6" />}
+      {/* Desktop Sidebar */}
+      <aside
+        className={`hidden md:flex flex-col bg-white dark:bg-[#1a2236] border-r border-slate-100 dark:border-slate-800 z-20 transition-all duration-300 ease-in-out overflow-hidden ${
+          isSidebarCollapsed ? 'w-[72px]' : 'w-64'
+        }`}
+      >
+        {/* Logo + Collapse Toggle */}
+        <div className={`flex items-center border-b border-slate-100 dark:border-slate-800 shrink-0 ${isSidebarCollapsed ? 'justify-center p-4 h-[72px]' : 'justify-between px-5 h-[72px]'}`}>
+          {!isSidebarCollapsed && (
+            <div className="flex items-center gap-3 cursor-pointer group" onClick={handleGenerateLogo}>
+              <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md transition-transform group-hover:rotate-12">
+                {appLogo
+                  ? <img src={appLogo} alt="Profee.in" className="w-5 h-5 object-cover rounded" />
+                  : isGeneratingLogo ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Gavel className="w-5 h-5" />
+                }
               </div>
-            }
-          </div>
-          <div>
-            <h1 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">Profee.in</h1>
-            <p className="text-[9px] font-black text-slate-400 tracking-wide leading-none">AI Tax Professional</p>
-          </div>
+              <div>
+                <h1 className="text-lg font-black text-indigo-600 dark:text-indigo-400 tracking-tighter leading-none">Profee.in</h1>
+                <p className="text-[9px] font-semibold text-slate-400 tracking-wide">AI Tax Professional</p>
+              </div>
+            </div>
+          )}
+          {isSidebarCollapsed && (
+            <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md cursor-pointer" onClick={handleGenerateLogo}>
+              {isGeneratingLogo ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Gavel className="w-5 h-5" />}
+            </div>
+          )}
+          <button
+            onClick={() => setIsSidebarCollapsed(v => !v)}
+            className={`p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors ${isSidebarCollapsed ? 'hidden' : ''}`}
+            title="Collapse sidebar"
+          >
+            <PanelLeftClose size={16} />
+          </button>
         </div>
 
-        <nav className="space-y-4 flex-1">
-          <NavItem view="dashboard" icon={<LayoutDashboard size={22} />} label="Overview" />
-          <NavItem view="clients" icon={<Users size={22} />} label="Client Vault" />
-          <NavItem view="proceedings" icon={<Gavel size={22} />} label="Litigation" />
-          <NavItem view="billing" icon={<ReceiptIndianRupee size={22} />} label="Accounts" />
+        {/* Expand button when collapsed */}
+        {isSidebarCollapsed && (
+          <button
+            onClick={() => setIsSidebarCollapsed(false)}
+            className="mx-auto mt-3 p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors"
+            title="Expand sidebar"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
+
+        {/* Nav Items */}
+        <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-3'}`}>
+          <NavItem view="dashboard" icon={<LayoutDashboard size={20} />} label="Overview" collapsed={isSidebarCollapsed} />
+          <NavItem view="clients" icon={<Users size={20} />} label="Client Vault" collapsed={isSidebarCollapsed} />
+          <NavItem view="proceedings" icon={<Gavel size={20} />} label="Litigation" collapsed={isSidebarCollapsed} />
+          <NavItem view="billing" icon={<ReceiptIndianRupee size={20} />} label="Accounts" collapsed={isSidebarCollapsed} />
         </nav>
 
-        <div className="mt-auto space-y-4">
-          <div className="clay-card p-6 bg-white dark:bg-slate-800 border-none shadow-xl">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black shadow-lg">
+        {/* User Footer */}
+        <div className={`border-t border-slate-100 dark:border-slate-800 shrink-0 ${isSidebarCollapsed ? 'p-3' : 'p-4'}`}>
+          {isSidebarCollapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-md cursor-pointer" onClick={() => setShowEditProfile(true)} title={billingSettings.practiceName}>
+                {(user?.email?.[0] || 'U').toUpperCase()}
+              </div>
+              <button onClick={toggleTheme} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors" title={isDarkMode ? 'Light mode' : 'Dark mode'}>
+                {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+              <button onClick={handleLogout} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors" title="Logout">
+                <LogOut size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
                 {(user?.email?.[0] || 'U').toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-xs text-slate-800 dark:text-slate-200 truncate tracking-tight">{billingSettings.practiceName}</p>
-                <p className="text-[9px] text-slate-400 truncate">{user?.email}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <button onClick={() => setShowEditProfile(true)} className="text-[10px] text-indigo-500 font-black tracking-wide hover:underline">Edit</button>
-                  <span className="text-slate-300">&bull;</span>
-                  <button onClick={toggleTheme} className="text-[10px] text-indigo-500 font-black tracking-wide hover:underline">{isDarkMode ? 'Light' : 'Dark'}</button>
-                  <span className="text-slate-300">&bull;</span>
-                  <button onClick={handleLogout} className="text-[10px] text-slate-400 font-black tracking-wide hover:text-rose-500 transition-colors">Logout</button>
-                </div>
+                <p className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">{billingSettings.practiceName}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => setShowEditProfile(true)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors" title="Edit profile">
+                  <UserCircle size={15} />
+                </button>
+                <button onClick={toggleTheme} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors" title={isDarkMode ? 'Light mode' : 'Dark mode'}>
+                  {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+                <button onClick={handleLogout} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors" title="Logout">
+                  <LogOut size={15} />
+                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </aside>
 
       {/* Mobile Nav */}
-      <div className="md:hidden flex items-center justify-between p-6 bg-white dark:bg-[#1e293b] shadow-xl sticky top-0 z-30 border-b dark:border-slate-800">
+      <div className="md:hidden flex items-center justify-between px-5 py-4 bg-white dark:bg-[#1a2236] shadow-sm sticky top-0 z-30 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-xl text-white"><Gavel size={18}/></div>
-          <span className="font-black text-xl tracking-tighter text-indigo-600">Profee.in</span>
+          <div className="bg-indigo-600 p-2 rounded-xl text-white"><Gavel size={16}/></div>
+          <span className="font-black text-lg tracking-tighter text-indigo-600">Profee.in</span>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-rose-500"><LogOut size={20}/></button>
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-3 bg-indigo-50 dark:bg-slate-800 text-indigo-600 rounded-2xl shadow-sm"><Menu size={24}/></button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-rose-500 transition-colors"><LogOut size={18}/></button>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2.5 bg-indigo-50 dark:bg-slate-800 text-indigo-600 rounded-xl"><Menu size={20}/></button>
         </div>
       </div>
 
       {/* Mobile menu dropdown */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="bg-white dark:bg-slate-800 p-6 m-4 rounded-3xl shadow-2xl space-y-2" onClick={e => e.stopPropagation()}>
-            <NavItem view="dashboard" icon={<LayoutDashboard size={22} />} label="Overview" />
-            <NavItem view="clients" icon={<Users size={22} />} label="Client Vault" />
-            <NavItem view="proceedings" icon={<Gavel size={22} />} label="Litigation" />
-            <NavItem view="billing" icon={<ReceiptIndianRupee size={22} />} label="Accounts" />
+          <div className="bg-white dark:bg-slate-800 p-5 m-4 rounded-3xl shadow-2xl space-y-1" onClick={e => e.stopPropagation()}>
+            <NavItem view="dashboard" icon={<LayoutDashboard size={20} />} label="Overview" />
+            <NavItem view="clients" icon={<Users size={20} />} label="Client Vault" />
+            <NavItem view="proceedings" icon={<Gavel size={20} />} label="Litigation" />
+            <NavItem view="billing" icon={<ReceiptIndianRupee size={20} />} label="Accounts" />
           </div>
         </div>
       )}
 
       {/* Main View */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto custom-scrollbar relative">
+      <main className="flex-1 p-5 md:p-8 overflow-y-auto custom-scrollbar relative min-w-0">
         {showEditProfile ? (
           <EditProfileView
             settings={billingSettings}
