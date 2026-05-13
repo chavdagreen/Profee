@@ -1155,8 +1155,10 @@ const BillingView: React.FC<BillingViewProps> = ({
                  <td className="px-6 py-5 text-center"><span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] uppercase font-black border border-indigo-100">{inv.status}</span></td>
                  <td className="px-6 py-5 text-right">
                    <div className="flex items-center gap-3 justify-end">
-                      <button onClick={(e) => { e.stopPropagation(); startEditInvoice(inv); }} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Edit2 size={18}/></button>
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentInvoice(inv); setSubView('invoice-preview'); }} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Eye size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); startEditInvoice(inv); }} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Edit invoice"><Edit2 size={18}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentInvoice(inv); setSubView('invoice-preview'); }} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="View invoice"><Eye size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDownloadInvoicePDF(inv); }} disabled={isDownloading} className="p-2 text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-40" title="Download invoice PDF"><FileDown size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDownloadClientLedgerPDF(inv.clientId); }} disabled={isDownloading} className="p-2 text-slate-400 hover:text-violet-600 transition-colors disabled:opacity-40" title="Download client ledger PDF"><FileText size={18} /></button>
                    </div>
                  </td>
                </tr>
@@ -1167,7 +1169,13 @@ const BillingView: React.FC<BillingViewProps> = ({
                  <td className="px-6 py-5 text-slate-400 font-medium text-xs">{rcp.date}</td>
                  <td className="px-6 py-5 text-right text-emerald-600 font-black">₹{(rcp.amount || 0).toLocaleString()}</td>
                  <td className="px-6 py-5 text-center"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] uppercase font-black border border-emerald-100">{rcp.paymentMethod}</span></td>
-                 <td className="px-6 py-5 text-right"><Eye size={18} className="text-slate-300 group-hover:text-indigo-600 transition-colors inline cursor-pointer" /></td>
+                 <td className="px-6 py-5 text-right">
+                   <div className="flex items-center gap-3 justify-end">
+                     <button onClick={(e) => { e.stopPropagation(); setCurrentReceipt(rcp); setSubView('receipt-preview'); }} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="View receipt"><Eye size={18} /></button>
+                     <button onClick={(e) => { e.stopPropagation(); handleDownloadReceiptPDF(rcp); }} disabled={isDownloading} className="p-2 text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-40" title="Download receipt PDF"><FileDown size={18} /></button>
+                     {rcp.clientId && <button onClick={(e) => { e.stopPropagation(); handleDownloadClientLedgerPDF(rcp.clientId!); }} disabled={isDownloading} className="p-2 text-slate-400 hover:text-violet-600 transition-colors disabled:opacity-40" title="Download client ledger PDF"><FileText size={18} /></button>}
+                   </div>
+                 </td>
                </tr>
              ))}
            </tbody>
