@@ -55,11 +55,23 @@ const ClientsView: React.FC<ClientsViewProps> = ({
   const [newGroupName, setNewGroupName] = useState('');
   const [isAddingGroup, setIsAddingGroup] = useState(false);
 
+  const HEARING_DEFAULTS: Partial<Hearing> = {
+    forum: 'AO',
+    assessmentYear: '2024-25',
+    status: 'Upcoming',
+    hearingDate: new Date().toISOString().split('T')[0],
+    time: '10:00',
+  };
+
+  const AY_OPTIONS = ['2025-26', '2024-25', '2023-24', '2022-23', '2021-22', '2020-21'];
+  const CASE_TYPES: Record<string, string[]> = {
+    AO: ['Section 143(3) Scrutiny', 'Section 148 Reassessment', 'Section 133(6) Notice', 'Section 263 Revision', 'Section 271 Penalty', 'TDS Default', 'Other'],
+    'CIT(A)': ['Appeal against AO Order', 'Penalty Appeal', 'Reassessment Appeal', 'Other'],
+    ITAT: ['Second Appeal', 'Miscellaneous Application', 'Stay Application', 'Other'],
+  };
+
   // New Hearing State
-  const [newHearing, setNewHearing] = useState<Partial<Hearing>>({
-    forum: 'AO', assessmentYear: '2024-25', status: 'Upcoming', 
-    hearingDate: new Date().toISOString().split('T')[0]
-  });
+  const [newHearing, setNewHearing] = useState<Partial<Hearing>>(HEARING_DEFAULTS);
 
   // Master List Filtering
   const filteredClients = useMemo(() => {
@@ -109,10 +121,13 @@ const ClientsView: React.FC<ClientsViewProps> = ({
       ...newHearing as Hearing,
       id: `h${Date.now()}`,
       clientId: selectedClient.id,
-      clientName: selectedClient.name
+      clientName: selectedClient.name,
+      time: newHearing.time || '10:00',
     };
     setHearings(prev => [...prev, hearingToAdd]);
     setShowAddHearingModal(false);
+    // Reset form for next use
+    setNewHearing({ ...HEARING_DEFAULTS, hearingDate: new Date().toISOString().split('T')[0] });
   };
 
   return (
@@ -420,37 +435,125 @@ const ClientsView: React.FC<ClientsViewProps> = ({
       {/* MODAL: Register New Hearing */}
       {showAddHearingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in zoom-in-95">
-           <div className="clay-card p-10 bg-white dark:bg-slate-800 w-full max-w-xl border-none shadow-2xl">
-              <div className="flex justify-between items-center mb-8">
-                 <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">New Matter: {selectedClient?.name}</h3>
-                 <button onClick={() => setShowAddHearingModal(false)} className="p-2 text-slate-400 hover:text-rose-500"><X /></button>
+          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="flex justify-between items-center px-8 py-5 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight">New Matter — {selectedClient?.name}</h3>
+              <button onClick={() => setShowAddHearingModal(false)} className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X /></button>
+            </div>
+            <form onSubmit={handleAddHearing} className="overflow-y-auto p-8 grid grid-cols-2 gap-5">
+              {/* Forum */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Forum *</label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.forum || 'AO'}
+                  onChange={e => setNewHearing(h => ({ ...h, forum: e.target.value, caseType: undefined }))}
+                >
+                  <option value="AO">AO (Assessing Officer)</option>
+                  <option value="CIT(A)">CIT (Appeals)</option>
+                  <option value="ITAT">ITAT (Tribunal)</option>
+                </select>
               </div>
-              <form onSubmit={handleAddHearing} className="grid grid-cols-2 gap-6">
-                 <div className="col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400">Case/Notice Description</label>
-                    <input required placeholder="E.g. 148 Reassessment Notice" className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, caseType: e.target.value})} />
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400">Assessment Year</label>
-                    <input required placeholder="2021-22" className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, assessmentYear: e.target.value})} />
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400">Forum</label>
-                    <select className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, forum: e.target.value})}>
-                       <option value="AO">AO</option><option value="CIT(A)">CIT (Appeals)</option><option value="ITAT">ITAT</option>
-                    </select>
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400">Date of Compliance</label>
-                    <input type="date" className="clay-input w-full p-3 font-bold" value={newHearing.hearingDate} onChange={e => setNewHearing({...newHearing, hearingDate: e.target.value})} />
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400">Fee Quote (₹)</label>
-                    <input type="number" className="clay-input w-full p-3 font-bold" onChange={e => setNewHearing({...newHearing, quotedFees: Number(e.target.value)})} />
-                 </div>
-                 <button type="submit" className="col-span-2 clay-button py-4 mt-4 font-black flex items-center justify-center gap-2"><Plus size={18}/> Add Matter to Ledger</button>
-              </form>
-           </div>
+              {/* Assessment Year */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Assessment Year *</label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.assessmentYear || '2024-25'}
+                  onChange={e => setNewHearing(h => ({ ...h, assessmentYear: e.target.value }))}
+                >
+                  {AY_OPTIONS.map(ay => <option key={ay} value={ay}>{ay}</option>)}
+                </select>
+              </div>
+              {/* Case / Matter Type */}
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Case / Matter Type *</label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.caseType || ''}
+                  onChange={e => setNewHearing(h => ({ ...h, caseType: e.target.value }))}
+                >
+                  <option value="">Select case type…</option>
+                  {(CASE_TYPES[newHearing.forum || 'AO'] || []).map(ct => <option key={ct} value={ct}>{ct}</option>)}
+                </select>
+              </div>
+              {/* Hearing Date */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hearing Date *</label>
+                <input
+                  type="date"
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.hearingDate || ''}
+                  onChange={e => setNewHearing(h => ({ ...h, hearingDate: e.target.value }))}
+                />
+              </div>
+              {/* Time */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hearing Time</label>
+                <input
+                  type="time"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.time || '10:00'}
+                  onChange={e => setNewHearing(h => ({ ...h, time: e.target.value }))}
+                />
+              </div>
+              {/* Notice Issue Date */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Notice Issue Date</label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.issueDate || ''}
+                  onChange={e => setNewHearing(h => ({ ...h, issueDate: e.target.value }))}
+                />
+              </div>
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Status</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.status || 'Upcoming'}
+                  onChange={e => setNewHearing(h => ({ ...h, status: e.target.value as Hearing['status'] }))}
+                >
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="Adjourned">Adjourned</option>
+                  <option value="Concluded">Concluded</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              {/* Professional Fee */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Professional Fee (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={newHearing.quotedFees || ''}
+                  onChange={e => setNewHearing(h => ({ ...h, quotedFees: Number(e.target.value) }))}
+                />
+              </div>
+              {/* Notes */}
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Notes / Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Optional notes about this matter…"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
+                  value={newHearing.description || ''}
+                  onChange={e => setNewHearing(h => ({ ...h, description: e.target.value }))}
+                />
+              </div>
+              {/* Submit */}
+              <button type="submit" className="col-span-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+                <Plus size={16} /> Add Matter
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
