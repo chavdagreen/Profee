@@ -97,6 +97,9 @@ const App: React.FC = () => {
   // Edit Profile state
   const [showEditProfile, setShowEditProfile] = useState(false);
 
+  // Save-error banner (shown when a Firestore write fails)
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   // Check if user logged in with Google (for calendar sync status)
   const isGoogleConnected = user?.providerData?.some((p: any) => p.providerId === 'google.com');
 
@@ -114,26 +117,67 @@ const App: React.FC = () => {
   // connectGoogleCalendar() re-fires onAuthStateChanged for the same user.
   const loadedUidRef = useRef<string | null>(null);
 
+  // localStorage helpers — keyed per user so multi-account browsers don't clash
+  const hearingsCacheKey = user ? `profee_hearings_${user.uid}` : null;
+
+  const saveHearingsCache = (uid: string, data: Hearing[]) => {
+    try { localStorage.setItem(`profee_hearings_${uid}`, JSON.stringify(data)); } catch {}
+  };
+
+  const loadHearingsCache = (uid: string): Hearing[] => {
+    try {
+      const raw = localStorage.getItem(`profee_hearings_${uid}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  };
+
   const loadAllData = useCallback(async () => {
     if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
     setDataLoading(true);
     try {
-      const [clientsData, hearingsData, invoicesData, receiptsData, groupsData, settingsData] = await Promise.all([
+      // Fetch hearings separately so a Firestore rules error on one collection
+      // doesn't prevent the rest of the app data from loading.
+      let hearingsData: Hearing[] = [];
+      try {
+        hearingsData = await db.fetchHearings();
+        // Firestore returned successfully — refresh the localStorage cache
+        saveHearingsCache(uid, hearingsData);
+        setSaveError(null);
+      } catch (hearingErr: any) {
+        console.error('Firestore hearings fetch failed:', hearingErr);
+        // Fall back to localStorage cache so data survives refreshes even when
+        // Firestore security rules are blocking reads.
+        hearingsData = loadHearingsCache(uid);
+        if (hearingsData.length > 0) {
+          setSaveError(
+            'Showing locally cached matters — database connection failed. ' +
+            'Deploy Firestore rules or check your Firebase project settings.'
+          );
+        } else {
+          setSaveError(
+            'Could not load matters from the database. ' +
+            'Deploy Firestore rules: run `firebase deploy --only firestore:rules`'
+          );
+        }
+      }
+      setHearings(hearingsData);
+
+      const [clientsData, invoicesData, receiptsData, groupsData, settingsData] = await Promise.all([
         db.fetchClients(),
-        db.fetchHearings(),
         db.fetchInvoices(),
         db.fetchReceipts(),
         db.fetchGroups(),
         db.fetchBillingSettings(),
       ]);
       setClients(clientsData);
-      setHearings(hearingsData);
       setInvoices(invoicesData);
       setReceipts(receiptsData);
       setGroups(groupsData);
       if (settingsData) setBillingSettings(settingsData);
     } catch (err) {
-      console.error('Error loading data:', err);
+      console.error('Error loading data from database:', err);
+      setSaveError('Could not load your data. Please refresh the page. If the problem persists, check your Firebase/Firestore setup.');
     } finally {
       setDataLoading(false);
     }
@@ -209,32 +253,62 @@ const App: React.FC = () => {
     }
   };
 
+  // Ref so persistence logic can read current hearings without a stale closure
+  const hearingsRef = useRef<Hearing[]>([]);
+  hearingsRef.current = hearings;
+
   const handleSetHearings: React.Dispatch<React.SetStateAction<Hearing[]>> = (action) => {
-    setHearings(prev => {
-      const next = typeof action === 'function' ? action(prev) : action;
-      const prevIds = new Set(prev.map(h => h.id));
-      // Persist new hearings
-      const newHearings = next.filter(h => !prevIds.has(h.id));
-      newHearings.forEach(h => {
-        db.addHearing(h).then(saved => {
-          setHearings(current => current.map(hh => hh.id === h.id ? saved : hh));
-          // Auto-sync new hearing to Google Calendar if connected (best-effort, non-blocking)
-          if (db.hasCalendarToken() && (saved.status === 'Upcoming' || saved.status === 'Adjourned')) {
-            db.syncHearingToGoogleCalendar(saved).then(result => {
-              if (result.authError) setIsCalendarConnected(false);
-            }).catch(console.error);
-          }
-        }).catch(console.error);
+    const prev = hearingsRef.current;
+    const next = typeof action === 'function' ? action(prev) : action;
+    const uid = auth.currentUser?.uid;
+
+    // 1. Update UI immediately
+    setHearings(next);
+
+    // 2. Write to localStorage right away — data survives refreshes even if
+    //    Firestore is unreachable (e.g. security rules not yet deployed).
+    if (uid) saveHearingsCache(uid, next);
+
+    // 3. Determine what changed — outside the state updater to avoid React 18 double-invocation
+    const prevIds = new Set(prev.map(h => h.id));
+
+    // Persist new hearings to Firestore
+    const newHearings = next.filter(h => !prevIds.has(h.id));
+    newHearings.forEach(h => {
+      db.addHearing(h).then(saved => {
+        // Replace the temporary client-side id with the Firestore-generated one
+        const updated = hearingsRef.current.map(hh => hh.id === h.id ? saved : hh);
+        setHearings(updated);
+        hearingsRef.current = updated;
+        // Keep cache in sync with Firestore id
+        if (uid) saveHearingsCache(uid, updated);
+        setSaveError(null);
+        // Auto-sync new hearing to Google Calendar if connected (best-effort, non-blocking)
+        if (db.hasCalendarToken() && (saved.status === 'Upcoming' || saved.status === 'Adjourned')) {
+          db.syncHearingToGoogleCalendar(saved).then(result => {
+            if (result.authError) setIsCalendarConnected(false);
+          }).catch(console.error);
+        }
+      }).catch((err) => {
+        console.error('Failed to save matter to Firestore:', err);
+        // Data is safe in localStorage — don't show error as a blocker,
+        // just note that Firestore sync failed.
+        setSaveError(
+          'Matter saved locally but could not sync to the database. ' +
+          'It will appear after you deploy Firestore rules.'
+        );
       });
-      // Persist updated hearings
-      const updatedHearings = next.filter(h =>
-        prevIds.has(h.id) &&
-        JSON.stringify(h) !== JSON.stringify(prev.find(p => p.id === h.id))
-      );
-      updatedHearings.forEach(h => {
-        db.updateHearing(h).catch(console.error);
+    });
+
+    // Persist updated hearings to Firestore
+    const updatedHearings = next.filter(h =>
+      prevIds.has(h.id) &&
+      JSON.stringify(h) !== JSON.stringify(prev.find(p => p.id === h.id))
+    );
+    updatedHearings.forEach(h => {
+      db.updateHearing(h).catch((err) => {
+        console.error('Failed to update matter in Firestore:', err);
       });
-      return next;
     });
   };
 
@@ -555,6 +629,17 @@ const App: React.FC = () => {
             <NavItem view="clients" icon={<Users size={20} />} label="Client Vault" />
             <NavItem view="proceedings" icon={<Gavel size={20} />} label="Litigation" />
             <NavItem view="billing" icon={<ReceiptIndianRupee size={20} />} label="Accounts" />
+          </div>
+        </div>
+      )}
+
+      {/* Save-error banner */}
+      {saveError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full px-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+            <span className="text-red-500 mt-0.5 shrink-0">⚠</span>
+            <p className="text-sm flex-1">{saveError}</p>
+            <button onClick={() => setSaveError(null)} className="text-red-400 hover:text-red-600 shrink-0 ml-2">✕</button>
           </div>
         </div>
       )}
