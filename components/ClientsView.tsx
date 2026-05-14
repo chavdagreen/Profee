@@ -63,7 +63,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({
     time: '10:00',
   };
 
-  const AY_OPTIONS = ['2025-26', '2024-25', '2023-24', '2022-23', '2021-22', '2020-21'];
+  const AY_OPTIONS = Array.from({ length: 26 }, (_, i) => {
+    const start = 2026 - i;
+    return `${start}-${String(start + 1).slice(-2)}`;
+  });
   const CASE_TYPES: Record<string, string[]> = {
     AO: ['Section 143(3) Scrutiny', 'Section 148 Reassessment', 'Section 133(6) Notice', 'Section 263 Revision', 'Section 271 Penalty', 'TDS Default', 'Other'],
     'CIT(A)': ['Appeal against AO Order', 'Penalty Appeal', 'Reassessment Appeal', 'Other'],
@@ -458,14 +461,18 @@ const ClientsView: React.FC<ClientsViewProps> = ({
               {/* Assessment Year */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Assessment Year *</label>
-                <select
+                <input
+                  type="text"
+                  list="ay-options-clients"
                   required
+                  placeholder="e.g. 2024-25"
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
-                  value={newHearing.assessmentYear || '2024-25'}
+                  value={newHearing.assessmentYear || ''}
                   onChange={e => setNewHearing(h => ({ ...h, assessmentYear: e.target.value }))}
-                >
-                  {AY_OPTIONS.map(ay => <option key={ay} value={ay}>{ay}</option>)}
-                </select>
+                />
+                <datalist id="ay-options-clients">
+                  {AY_OPTIONS.map(ay => <option key={ay} value={ay} />)}
+                </datalist>
               </div>
               {/* Case / Matter Type */}
               <div className="col-span-2 space-y-1.5">
