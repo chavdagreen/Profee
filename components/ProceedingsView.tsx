@@ -15,7 +15,11 @@ interface ProceedingsViewProps {
 }
 
 const FORUMS = ['AO', 'CIT(A)', 'ITAT'] as const;
-const AY_OPTIONS = ['2024-25', '2025-26', '2026-27', '2023-24', '2022-23', '2021-22', '2020-21'];
+// All AYs from 2026-27 down to 2001-02 (newest first so the list is easy to scan)
+const AY_OPTIONS = Array.from({ length: 26 }, (_, i) => {
+  const start = 2026 - i;
+  return `${start}-${String(start + 1).slice(-2)}`;
+});
 
 const CASE_TYPES: Record<string, string[]> = {
   AO: ['Section 143(3) Scrutiny', 'Section 148 Reassessment', 'Section 133(6) Notice', 'Section 263 Revision', 'Section 271 Penalty', 'TDS Default', 'Other'],
@@ -222,14 +226,18 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
                 {/* Assessment Year */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Assessment Year *</label>
-                  <select
+                  <input
+                    type="text"
+                    list="ay-options-proceedings"
                     required
+                    placeholder="e.g. 2024-25"
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
-                    value={form.assessmentYear || '2024-25'}
+                    value={form.assessmentYear || ''}
                     onChange={e => setForm(f => ({ ...f, assessmentYear: e.target.value }))}
-                  >
-                    {AY_OPTIONS.map(ay => <option key={ay} value={ay}>{ay}</option>)}
-                  </select>
+                  />
+                  <datalist id="ay-options-proceedings">
+                    {AY_OPTIONS.map(ay => <option key={ay} value={ay} />)}
+                  </datalist>
                 </div>
 
                 {/* Case Type */}
