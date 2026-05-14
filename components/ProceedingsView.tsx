@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Hearing, Client } from '../types';
 import {
   Building2, Scale, Gavel, ChevronRight, Plus,
-  ReceiptIndianRupee, Info, Calendar, X, CheckCircle2,
+  ReceiptIndianRupee, Info, Calendar, X, CheckCircle2, Pencil,
 } from 'lucide-react';
 
 interface ProceedingsViewProps {
@@ -36,6 +36,7 @@ const forumMeta: Record<string, { icon: React.ElementType; color: string; label:
 const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, setHearings, onBillMatter, isCalendarConnected }) => {
   const [selectedForum, setSelectedForum] = useState<string>('AO');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingHearing, setEditingHearing] = useState<Hearing | null>(null);
 
   const [form, setForm] = useState<Partial<Hearing>>({
     forum: 'AO',
@@ -44,6 +45,13 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
     hearingDate: new Date().toISOString().split('T')[0],
     time: '10:00',
   });
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingHearing) return;
+    setHearings(prev => prev.map(h => h.id === editingHearing.id ? editingHearing : h));
+    setEditingHearing(null);
+  };
 
   const filteredHearings = useMemo(
     () => hearings.filter(h => h.forum === selectedForum),
@@ -160,7 +168,7 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => onBillMatter(h)} className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Quick Bill"><ReceiptIndianRupee size={18} /></button>
-                  <button className="p-3 bg-slate-100 text-slate-400 rounded-2xl group-hover:bg-indigo-600 group-hover:text-white transition-all"><ChevronRight size={18} /></button>
+                  <button onClick={() => setEditingHearing({ ...h })} className="p-3 bg-slate-100 text-slate-400 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all" title="Edit matter"><Pencil size={16} /></button>
                 </div>
               </div>
             </div>
@@ -334,6 +342,107 @@ const ProceedingsView: React.FC<ProceedingsViewProps> = ({ hearings, clients, se
                 <button type="button" onClick={() => setShowAddModal(false)} className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
                 <button type="submit" className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold text-sm transition-all shadow-md shadow-indigo-200/50">
                   <Calendar size={15} /> Save Proceeding
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======= EDIT HEARING MODAL ======= */}
+      {editingHearing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                <Pencil size={17} className="text-indigo-600" /> Edit Proceeding
+              </h3>
+              <button onClick={() => setEditingHearing(null)} className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X size={18} /></button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="overflow-y-auto custom-scrollbar">
+              <div className="p-8 grid grid-cols-2 gap-5">
+                {/* Forum */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Forum *</label>
+                  <select required className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.forum}
+                    onChange={e => setEditingHearing(h => h ? { ...h, forum: e.target.value, caseType: '' } : null)}>
+                    {FORUMS.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+                {/* Assessment Year */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Assessment Year *</label>
+                  <input type="text" list="ay-options-edit" required placeholder="e.g. 2024-25"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.assessmentYear}
+                    onChange={e => setEditingHearing(h => h ? { ...h, assessmentYear: e.target.value } : null)} />
+                  <datalist id="ay-options-edit">
+                    {AY_OPTIONS.map(ay => <option key={ay} value={ay} />)}
+                  </datalist>
+                </div>
+                {/* Case Type */}
+                <div className="col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Case / Matter Type *</label>
+                  <select required className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.caseType}
+                    onChange={e => setEditingHearing(h => h ? { ...h, caseType: e.target.value } : null)}>
+                    <option value="">Select case type…</option>
+                    {(CASE_TYPES[editingHearing.forum] || []).map(ct => <option key={ct} value={ct}>{ct}</option>)}
+                  </select>
+                </div>
+                {/* Hearing Date */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hearing Date *</label>
+                  <input type="date" required className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.hearingDate}
+                    onChange={e => setEditingHearing(h => h ? { ...h, hearingDate: e.target.value } : null)} />
+                </div>
+                {/* Time */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hearing Time</label>
+                  <input type="time" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.time || '10:00'}
+                    onChange={e => setEditingHearing(h => h ? { ...h, time: e.target.value } : null)} />
+                </div>
+                {/* Notice Issue Date */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Notice Issue Date</label>
+                  <input type="date" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.issueDate || ''}
+                    onChange={e => setEditingHearing(h => h ? { ...h, issueDate: e.target.value } : null)} />
+                </div>
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Status</label>
+                  <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.status}
+                    onChange={e => setEditingHearing(h => h ? { ...h, status: e.target.value as Hearing['status'] } : null)}>
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Adjourned">Adjourned</option>
+                    <option value="Concluded">Concluded</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+                {/* Professional Fee */}
+                <div className="col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Professional Fee (₹)</label>
+                  <input type="number" min="0" placeholder="0" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingHearing.quotedFees || ''}
+                    onChange={e => setEditingHearing(h => h ? { ...h, quotedFees: Number(e.target.value) } : null)} />
+                </div>
+                {/* Notes */}
+                <div className="col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Notes / Description</label>
+                  <textarea rows={2} placeholder="Optional notes…" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
+                    value={editingHearing.description || ''}
+                    onChange={e => setEditingHearing(h => h ? { ...h, description: e.target.value } : null)} />
+                </div>
+              </div>
+              <div className="px-8 py-5 border-t border-slate-100 dark:border-slate-700 flex justify-between bg-slate-50/50 dark:bg-slate-900/20">
+                <button type="button" onClick={() => setEditingHearing(null)} className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
+                <button type="submit" className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold text-sm transition-all shadow-md shadow-indigo-200/50">
+                  <Pencil size={14} /> Save Changes
                 </button>
               </div>
             </form>
