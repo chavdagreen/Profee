@@ -229,14 +229,21 @@ const App: React.FC = () => {
   const handleSetClients: React.Dispatch<React.SetStateAction<Client[]>> = (action) => {
     setClients(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      // Find newly added clients (in next but not in prev by id)
       const prevIds = new Set(prev.map(c => c.id));
+      // New clients
       const newClients = next.filter(c => !prevIds.has(c.id));
       newClients.forEach(c => {
         db.addClient(c).then(saved => {
-          // Update the client with the server-generated id
           setClients(current => current.map(cc => cc.id === c.id ? saved : cc));
         }).catch(console.error);
+      });
+      // Updated clients
+      const updatedClients = next.filter(c =>
+        prevIds.has(c.id) &&
+        JSON.stringify(c) !== JSON.stringify(prev.find(p => p.id === c.id))
+      );
+      updatedClients.forEach(c => {
+        db.updateClient(c).catch(console.error);
       });
       return next;
     });
