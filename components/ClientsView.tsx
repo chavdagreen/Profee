@@ -1,12 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Client, Hearing, View, Invoice, Receipt, LedgerEntry } from '../types';
-import { 
-  Search, Plus, ChevronLeft, History, Gavel, Tag, CreditCard, 
-  ChevronRight, Printer, FileDown, Eye, X, UserPlus, FolderPlus,
+import {
+  Search, Plus, ChevronLeft, History, Gavel, Tag, CreditCard,
+  ChevronRight, Printer, FileDown, Eye, EyeOff, X, UserPlus, FolderPlus,
   TrendingUp, AlertCircle, Sparkles, LayoutGrid, List, ArrowUpDown,
   Lock, Mail, Phone, MapPin, Building, Calendar, Wallet, ReceiptIndianRupee,
-  Filter, ShieldCheck, MoreVertical, Users
+  Filter, ShieldCheck, MoreVertical, Users, Pencil,
 } from 'lucide-react';
 
 interface ClientsViewProps {
@@ -46,9 +46,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddHearingModal, setShowAddHearingModal] = useState(false);
+  const [editingHearing, setEditingHearing] = useState<Hearing | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState('All');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [editPasswordVisible, setEditPasswordVisible] = useState(false);
 
   // Profile Form State
   const [newClient, setNewClient] = useState<Partial<Client>>({ entityType: 'Individual', group: 'Individual' });
@@ -131,6 +134,21 @@ const ClientsView: React.FC<ClientsViewProps> = ({
     setShowAddHearingModal(false);
     // Reset form for next use
     setNewHearing({ ...HEARING_DEFAULTS, hearingDate: new Date().toISOString().split('T')[0] });
+  };
+
+  const handleEditHearingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingHearing) return;
+    setHearings(prev => prev.map(h => h.id === editingHearing.id ? editingHearing : h));
+    setEditingHearing(null);
+  };
+
+  const handleEditClientSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClient) return;
+    setClients(prev => prev.map(c => c.id === editingClient.id ? editingClient : c));
+    setEditingClient(null);
+    setEditPasswordVisible(false);
   };
 
   return (
@@ -233,6 +251,14 @@ const ClientsView: React.FC<ClientsViewProps> = ({
             {/* DETAILS TAB */}
             {profileTab === 'details' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-bottom-2 duration-300">
+                <div className="md:col-span-2 flex justify-end">
+                  <button
+                    onClick={() => setEditingClient({ ...selectedClient! })}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-semibold transition-colors"
+                  >
+                    <Pencil size={12} /> Edit Profile
+                  </button>
+                </div>
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 space-y-4">
                   <p className="text-[10px] font-bold text-indigo-500 tracking-widest uppercase">Identification & Portal</p>
                   <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
@@ -372,7 +398,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                       <p className="text-[10px] font-medium text-slate-400 mb-4">AY {h.assessmentYear}</p>
                       <div className="flex items-center justify-between pt-3 border-t border-slate-50 dark:border-slate-700">
                         <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-medium"><Calendar size={12}/>{h.hearingDate}</div>
-                        <button className="text-indigo-600 text-[10px] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">Details <ChevronRight size={11}/></button>
+                        <button
+                          onClick={() => setEditingHearing({ ...h })}
+                          className="text-indigo-600 text-[10px] font-semibold flex items-center gap-0.5 hover:text-indigo-800 transition-colors"
+                        >
+                          <Pencil size={11}/> Edit
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -430,6 +461,238 @@ const ClientsView: React.FC<ClientsViewProps> = ({
                   {isAddingGroup ? <input required placeholder="New group name..." className="clay-input w-full p-3 font-bold" onChange={e => setNewGroupName(e.target.value)} /> : <select className="clay-input w-full p-3 font-bold" onChange={e => setNewClient({...newClient, group: e.target.value})}>{groups.map(g => <option key={g} value={g}>{g}</option>)}</select>}
                </div>
                <button type="submit" className="col-span-2 clay-button py-4 mt-4 font-black text-lg flex items-center justify-center gap-2 shadow-indigo-100"><Sparkles size={20}/> Encrypt & Save Profile</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Hearing */}
+      {editingHearing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="flex justify-between items-center px-8 py-5 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight">Edit Matter</h3>
+              <button onClick={() => setEditingHearing(null)} className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X /></button>
+            </div>
+            <form onSubmit={handleEditHearingSubmit} className="overflow-y-auto p-8 grid grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Forum *</label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.forum}
+                  onChange={e => setEditingHearing(h => ({ ...h!, forum: e.target.value, caseType: '' }))}
+                >
+                  <option value="AO">AO (Assessing Officer)</option>
+                  <option value="CIT(A)">CIT (Appeals)</option>
+                  <option value="ITAT">ITAT (Tribunal)</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Assessment Year *</label>
+                <input
+                  type="text"
+                  list="ay-options-edit"
+                  required
+                  placeholder="e.g. 2024-25"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.assessmentYear || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, assessmentYear: e.target.value }))}
+                />
+                <datalist id="ay-options-edit">
+                  {AY_OPTIONS.map(ay => <option key={ay} value={ay} />)}
+                </datalist>
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Case / Matter Type *</label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.caseType || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, caseType: e.target.value }))}
+                >
+                  <option value="">Select case type…</option>
+                  {(CASE_TYPES[editingHearing.forum || 'AO'] || []).map(ct => <option key={ct} value={ct}>{ct}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hearing Date *</label>
+                <input
+                  type="date"
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.hearingDate || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, hearingDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Hearing Time</label>
+                <input
+                  type="time"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.time || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, time: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Notice Issue Date</label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.issueDate || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, issueDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Status</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.status || 'Upcoming'}
+                  onChange={e => setEditingHearing(h => ({ ...h!, status: e.target.value as Hearing['status'] }))}
+                >
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="Adjourned">Adjourned</option>
+                  <option value="Concluded">Concluded</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Professional Fee (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingHearing.quotedFees || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, quotedFees: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Notes / Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Optional notes about this matter…"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
+                  value={editingHearing.description || ''}
+                  onChange={e => setEditingHearing(h => ({ ...h!, description: e.target.value }))}
+                />
+              </div>
+              <button type="submit" className="col-span-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+                Save Changes
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Client Profile */}
+      {editingClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="flex justify-between items-center px-8 py-5 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2"><Pencil size={18} className="text-indigo-600"/> Edit Client Profile</h3>
+              <button onClick={() => { setEditingClient(null); setEditPasswordVisible(false); }} className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"><X /></button>
+            </div>
+            <form onSubmit={handleEditClientSubmit} className="overflow-y-auto p-8 grid grid-cols-2 gap-5">
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Full Legal Name *</label>
+                <input
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.name || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">PAN Number *</label>
+                <input
+                  required
+                  maxLength={10}
+                  placeholder="ABCDE1234F"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold font-mono uppercase text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.pan || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, pan: e.target.value.toUpperCase() }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Entity Type</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.entityType || 'Individual'}
+                  onChange={e => setEditingClient(c => ({ ...c!, entityType: e.target.value as any }))}
+                >
+                  <option value="Individual">Individual</option>
+                  <option value="Company">Company</option>
+                  <option value="Firm">Partnership Firm</option>
+                  <option value="HUF">HUF</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Group</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.group || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, group: e.target.value }))}
+                >
+                  {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Mobile Contact</label>
+                <input
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.contact || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, contact: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Email ID</label>
+                <input
+                  type="email"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.email || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, email: e.target.value }))}
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Address</label>
+                <textarea
+                  rows={2}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
+                  value={editingClient.address || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, address: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">GSTIN</label>
+                <input
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold font-mono uppercase text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  value={editingClient.gstin || ''}
+                  onChange={e => setEditingClient(c => ({ ...c!, gstin: e.target.value.toUpperCase() }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">IT Portal Password</label>
+                <div className="relative">
+                  <input
+                    type={editPasswordVisible ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    value={editingClient.portalPassword || ''}
+                    onChange={e => setEditingClient(c => ({ ...c!, portalPassword: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditPasswordVisible(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-500 transition-colors"
+                  >
+                    {editPasswordVisible ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" className="col-span-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm transition-all">
+                Save Profile
+              </button>
             </form>
           </div>
         </div>
